@@ -1,0 +1,49 @@
+# Laravel / PHP
+*.log
+.env
+.env.backup
+.env.production
+.phpactor.json
+.phpunit.result.cache
+/.phpunit.cache
+/auth.json
+/vendor
+/storage/*.key
+/storage/pail
+Homestead.json
+Homestead.yaml
+
+# Node / NPM
+/node_modules
+package-lock.json
+
+# Build artifacts
+/public/build
+/public/hot
+/public/storage
+
+# IDE / Editor
+/.fleet
+/.idea
+/.nova
+/.vscode
+/.zed
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Claude Code / AI tools
+/.claude
+/docs
+
+# Testing
+/.phpunit.cache
+/coverage
+
+# Misc
+*.bak
+*.tmp
