@@ -10,21 +10,23 @@ interface Props {
     users?: UserData[];
 }
 
-const props = defineProps<Props>();
+defineProps<Props>();
 </script>
 
 <template>
-    <Head title="Notes" />
+    <Head title="Favorite Notes" />
 
-    <AppLayout title="All Notes">
+    <AppLayout title="Favorites">
         <NotesSection
             fetch-url="/api/notes"
+            :filters="{ filter: 'favorites' }"
             :tags="tags"
             :groups="groups"
             :users="users"
             :show-quick-input="true"
-            empty-title="No notes found"
-            empty-description="Create your first note by clicking the input above."
+            :default-note-values="{ is_favorited: true }"
+            empty-title="No favorite notes"
+            empty-description="Notes you mark as favorites will appear here."
         />
     </AppLayout>
 </template>

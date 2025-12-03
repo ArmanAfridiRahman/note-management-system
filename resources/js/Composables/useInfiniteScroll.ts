@@ -13,15 +13,15 @@ export function useInfiniteScroll<T>(options: UseInfiniteScrollOptions<T>) {
 
     const items = ref<T[]>([...initialItems]) as Ref<T[]>;
     const loading = ref(false);
-    const initialLoading = ref(false);
-    const hasMore = ref(initialItems.length >= perPage);
+    const initialLoading = ref(initialItems.length === 0); // Start as true if no initial items
+    const hasMore = ref(true); // Always start as true to allow initial load
     const cursor = ref<string | null>(null);
     const sentinel = ref<HTMLElement | null>(null);
     const error = ref<string | null>(null);
     const currentFilters = ref<Record<string, unknown>>(options.filters || {});
 
     let observer: IntersectionObserver | null = null;
-    let isInitialized = initialItems.length > 0;
+    const isInitialized = initialItems.length > 0;
 
     async function loadMore() {
         if (loading.value || !hasMore.value) return;
@@ -90,7 +90,6 @@ export function useInfiniteScroll<T>(options: UseInfiniteScrollOptions<T>) {
         setupObserver();
         // Only load if we don't have initial items
         if (!isInitialized) {
-            initialLoading.value = true;
             loadMore();
         }
     });

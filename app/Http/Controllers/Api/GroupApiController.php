@@ -139,4 +139,42 @@ class GroupApiController extends Controller
             'message' => 'Group deleted successfully.',
         ]);
     }
+
+    /**
+     * Merge one group into another
+     * All notes from source group are moved to target group, then source is deleted
+     */
+    public function merge(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'source_group_id' => 'required|exists:groups,id',
+            'target_group_id' => 'required|exists:groups,id|different:source_group_id',
+        ]);
+
+        $sourceGroup = Group::find($validated['source_group_id']);
+        $targetGroup = Group::find($validated['target_group_id']);
+
+        // Verify both groups belong to the current user
+        if ($sourceGroup->user_id !== $request->user()->id || $targetGroup->user_id !== $request->user()->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized.',
+            ], 403);
+        }
+
+        // Move all notes from source group to target group
+        $sourceGroup->notes()->update(['group_id' => $targetGroup->id]);
+
+        // Move any child groups to target group
+        $sourceGroup->children()->update(['parent_id' => $targetGroup->id]);
+
+        // Delete the source group
+        $sourceGroup->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Groups merged successfully.',
+            'data' => $targetGroup->load('notes'),
+        ]);
+    }
 }

@@ -26,6 +26,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Notes
     Route::get('/notes/archived', [NoteController::class, 'archived'])->name('notes.archived');
+    Route::get('/notes/favorites', [NoteController::class, 'favorites'])->name('notes.favorites');
+    Route::get('/notes/encrypted', [NoteController::class, 'encrypted'])->name('notes.encrypted');
     Route::resource('notes', NoteController::class);
     Route::patch('/notes/{note}/archive', [NoteController::class, 'archive'])->name('notes.archive');
     Route::patch('/notes/{note}/pin', [NoteController::class, 'togglePin'])->name('notes.pin');

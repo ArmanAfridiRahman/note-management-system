@@ -8,6 +8,7 @@ import { useAutoSave } from '@/Composables/useAutoSave';
 import { appConfig } from '@/config/app';
 import type { NoteData, TagData, GroupData } from '@/types/models';
 import {
+    X,
     Save,
     Trash2,
     Pin,
@@ -18,10 +19,13 @@ import {
     Tag,
     Folder,
     Palette,
-    MoreHorizontal,
     Loader2,
     Cloud,
     CloudOff,
+    FileText,
+    ChevronDown,
+    ChevronUp,
+    Check,
 } from 'lucide-vue-next';
 
 // Extended NoteData for modal (id can be undefined for new notes)
@@ -34,16 +38,25 @@ interface ModalNoteData extends Partial<NoteData> {
     tags: TagData[];
 }
 
+interface DefaultValues {
+    is_encrypted?: boolean;
+    is_favorited?: boolean;
+    is_archived?: boolean;
+    is_pinned?: boolean;
+}
+
 interface Props {
     open: boolean;
     note?: NoteData | null;
     tags: TagData[];
     groups: GroupData[];
     mode?: 'view' | 'edit' | 'create';
+    defaultValues?: DefaultValues;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     mode: 'create',
+    defaultValues: () => ({}),
 });
 
 const emit = defineEmits<{
@@ -62,24 +75,35 @@ const currentMode = ref(props.mode);
 const submitting = ref(false);
 const errors = ref<Record<string, string>>({});
 const showOptions = ref(false);
-const titleInput = ref<HTMLInputElement | null>(null);
+const titleInput = ref<InstanceType<typeof Input> | null>(null);
 const currentNoteId = ref<number | undefined>(undefined);
 
-const form = ref({
+// Core content form (auto-saved)
+const contentForm = ref({
     title: '',
     content: '',
+});
+
+// Metadata form (saved separately via API)
+const metaForm = ref({
     group_id: '',
     tag_ids: [] as number[],
+    color: '',
+    is_pinned: false,
+    is_favorited: false,
+    is_archived: false,
+});
+
+// Encryption form (only for new notes)
+const encryptionForm = ref({
     is_encrypted: false,
     encryption_password: '',
     encryption_hint: '',
-    color: '',
-    is_pinned: false,
 });
 
 const autoSaveEnabled = ref(false);
 
-// Auto-save functionality
+// Auto-save functionality for core content only
 const {
     isDirty,
     isSaving,
@@ -90,32 +114,47 @@ const {
     init: initAutoSave,
     clearLocal,
 } = useAutoSave({
-    data: form,
+    data: contentForm,
     storageKey: appConfig.storage.draftNote,
     enabled: autoSaveEnabled,
     onSave: async (data) => {
-        if (!currentNoteId.value) {
-            // Create new note
-            const response = await axios.post('/notes', data);
-            currentNoteId.value = response.data.id;
-            emit('saved');
-        } else {
-            // Update existing note
-            await axios.put(`/notes/${currentNoteId.value}`, data);
-            emit('saved');
-        }
+        return new Promise((resolve, reject) => {
+            const url = currentNoteId.value ? `/notes/${currentNoteId.value}` : '/notes';
+            const method = currentNoteId.value ? 'put' : 'post';
+
+            // Only send core content data for auto-save
+            const payload = {
+                title: data.title,
+                content: data.content,
+            };
+
+            router[method](url, payload, {
+                preserveScroll: true,
+                preserveState: true,
+                onSuccess: (page) => {
+                    if (!currentNoteId.value && page.props.note) {
+                        currentNoteId.value = (page.props.note as NoteData).id;
+                    }
+                    emit('saved');
+                    resolve(undefined);
+                },
+                onError: (errors) => {
+                    reject(new Error(Object.values(errors).join(', ')));
+                },
+            });
+        });
     },
 });
 
 const colorOptions = [
-    { value: '', label: 'None', bg: 'bg-muted' },
-    { value: '#fef3c7', label: 'Yellow', bg: 'bg-yellow-100' },
-    { value: '#dcfce7', label: 'Green', bg: 'bg-green-100' },
-    { value: '#dbeafe', label: 'Blue', bg: 'bg-blue-100' },
-    { value: '#fce7f3', label: 'Pink', bg: 'bg-pink-100' },
-    { value: '#f3e8ff', label: 'Purple', bg: 'bg-purple-100' },
-    { value: '#fed7aa', label: 'Orange', bg: 'bg-orange-100' },
-    { value: '#e5e7eb', label: 'Gray', bg: 'bg-gray-200' },
+    { value: '', label: 'None', class: 'bg-muted border-muted-foreground/20' },
+    { value: '#fef3c7', label: 'Yellow', class: 'bg-yellow-100 border-yellow-300' },
+    { value: '#dcfce7', label: 'Green', class: 'bg-green-100 border-green-300' },
+    { value: '#dbeafe', label: 'Blue', class: 'bg-blue-100 border-blue-300' },
+    { value: '#fce7f3', label: 'Pink', class: 'bg-pink-100 border-pink-300' },
+    { value: '#f3e8ff', label: 'Purple', class: 'bg-purple-100 border-purple-300' },
+    { value: '#fed7aa', label: 'Orange', class: 'bg-orange-100 border-orange-300' },
+    { value: '#e5e7eb', label: 'Gray', class: 'bg-gray-200 border-gray-300' },
 ];
 
 const tagOptions = computed(() =>
@@ -137,11 +176,24 @@ const groupOptions = computed(() => [
 
 const isEditing = computed(() => currentMode.value === 'edit' || currentMode.value === 'create');
 const isNewNote = computed(() => currentMode.value === 'create' && !currentNoteId.value);
-const canSave = computed(() => form.value.title.trim().length > 0);
+const canSave = computed(() => contentForm.value.title.trim().length > 0);
+
+// Convert hex to RGB for light background
+const hexToRgb = (hex: string) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : null;
+};
 
 const modalBackground = computed(() => {
-    if (form.value.color) {
-        return { backgroundColor: form.value.color };
+    if (metaForm.value.color) {
+        const rgb = hexToRgb(metaForm.value.color);
+        if (rgb) {
+            return { backgroundColor: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.12)` };
+        }
     }
     return {};
 });
@@ -201,33 +253,46 @@ watch(
 );
 
 function resetForm() {
-    form.value = {
+    contentForm.value = {
         title: '',
         content: '',
+    };
+    metaForm.value = {
         group_id: '',
         tag_ids: [],
-        is_encrypted: false,
+        color: '',
+        is_pinned: props.defaultValues?.is_pinned ?? false,
+        is_favorited: props.defaultValues?.is_favorited ?? false,
+        is_archived: props.defaultValues?.is_archived ?? false,
+    };
+    encryptionForm.value = {
+        is_encrypted: props.defaultValues?.is_encrypted ?? false,
         encryption_password: '',
         encryption_hint: '',
-        color: '',
-        is_pinned: false,
     };
     errors.value = {};
-    showOptions.value = false;
+    // Auto-show options panel if encryption is enabled by default
+    showOptions.value = props.defaultValues?.is_encrypted ?? false;
     currentNoteId.value = undefined;
 }
 
 function populateForm(note: NoteData) {
-    form.value = {
+    contentForm.value = {
         title: note.title || '',
         content: note.content || note.excerpt || '',
+    };
+    metaForm.value = {
         group_id: note.group_id?.toString() || note.group?.id?.toString() || '',
         tag_ids: note.tag_ids || note.tags?.map((t) => t.id) || [],
+        color: note.color || '',
+        is_pinned: note.is_pinned || false,
+        is_favorited: note.is_favorited || false,
+        is_archived: note.is_archived || false,
+    };
+    encryptionForm.value = {
         is_encrypted: note.is_encrypted || false,
         encryption_password: '',
         encryption_hint: '',
-        color: note.color || '',
-        is_pinned: note.is_pinned || false,
     };
 }
 
@@ -248,33 +313,87 @@ function startEditing() {
     });
 }
 
+// API calls for metadata updates
+async function updateColor(color: string) {
+    metaForm.value.color = color;
+    if (currentNoteId.value) {
+        try {
+            await axios.patch(`/api/notes/${currentNoteId.value}/color`, { color });
+        } catch (err) {
+            console.error('Failed to update color:', err);
+        }
+    }
+}
+
+async function updateTags(tagIds: string | number | (string | number)[]) {
+    const ids = Array.isArray(tagIds) ? tagIds.map(Number) : [Number(tagIds)];
+    metaForm.value.tag_ids = ids;
+    if (currentNoteId.value) {
+        try {
+            await axios.patch(`/api/notes/${currentNoteId.value}/tags`, { tag_ids: ids });
+            emit('saved');
+        } catch (err) {
+            console.error('Failed to update tags:', err);
+        }
+    }
+}
+
+async function updateGroup(groupId: string | number | (string | number)[]) {
+    const id = String(groupId);
+    metaForm.value.group_id = id;
+    if (currentNoteId.value) {
+        try {
+            if (id) {
+                await axios.post(`/api/notes/${currentNoteId.value}/add-to-group`, { group_id: parseInt(id) });
+            } else {
+                await axios.post(`/api/notes/${currentNoteId.value}/remove-from-group`);
+            }
+            emit('saved');
+        } catch (err) {
+            console.error('Failed to update group:', err);
+        }
+    }
+}
+
 async function handleSave() {
     if (!canSave.value || submitting.value) return;
+
+    // Ensure we have a note ID when editing an existing note
+    const noteId = currentNoteId.value || props.note?.id;
+    const isCreating = currentMode.value === 'create' && !noteId;
 
     submitting.value = true;
     errors.value = {};
 
-    try {
-        if (isNewNote.value) {
-            const response = await axios.post('/notes', form.value);
-            currentNoteId.value = response.data.id;
+    const url = isCreating ? '/notes' : `/notes/${noteId}`;
+    const method = isCreating ? 'post' : 'put';
+
+    // Combine all form data for full save
+    const payload = {
+        ...contentForm.value,
+        ...metaForm.value,
+        ...(isCreating && encryptionForm.value.is_encrypted ? encryptionForm.value : {}),
+    };
+
+    router[method](url, payload, {
+        preserveScroll: true,
+        onSuccess: (page) => {
+            // For new notes, get the ID from the response
+            if (isCreating && page.props.note) {
+                currentNoteId.value = (page.props.note as NoteData).id;
+            }
             emit('saved');
-        } else {
-            await axios.put(`/notes/${currentNoteId.value}`, form.value);
-            emit('saved');
-        }
-        clearLocal();
-        resetAutoSave();
-        handleClose();
-    } catch (err: any) {
-        if (err.response?.data?.errors) {
-            errors.value = err.response.data.errors;
-        } else {
-            errors.value = { general: 'Failed to save note. Please try again.' };
-        }
-    } finally {
-        submitting.value = false;
-    }
+            clearLocal();
+            resetAutoSave();
+            handleClose();
+        },
+        onError: (errs) => {
+            errors.value = errs as Record<string, string>;
+        },
+        onFinish: () => {
+            submitting.value = false;
+        },
+    });
 }
 
 function handleDelete() {
@@ -296,26 +415,29 @@ function handleDelete() {
     }
 }
 
-function handleTogglePin() {
-    form.value.is_pinned = !form.value.is_pinned;
+async function handleTogglePin() {
+    metaForm.value.is_pinned = !metaForm.value.is_pinned;
 
     if (currentNoteId.value) {
-        router.patch(
-            `/notes/${currentNoteId.value}/pin`,
-            {},
-            { preserveScroll: true }
-        );
+        try {
+            await axios.post(`/api/notes/${currentNoteId.value}/toggle-pin`);
+            emit('saved');
+        } catch (err) {
+            console.error('Failed to toggle pin:', err);
+            metaForm.value.is_pinned = !metaForm.value.is_pinned; // Revert on error
+        }
     }
 }
 
-function handleToggleFavorite() {
+async function handleToggleFavorite() {
     if (!currentNoteId.value) return;
 
-    router.patch(
-        `/notes/${currentNoteId.value}/favorite`,
-        {},
-        { preserveScroll: true }
-    );
+    try {
+        await axios.post(`/api/notes/${currentNoteId.value}/toggle-favorite`);
+        emit('saved');
+    } catch (err) {
+        console.error('Failed to toggle favorite:', err);
+    }
 }
 
 function handleArchive() {
@@ -338,9 +460,9 @@ function handleShare() {
         emit('share', {
             ...props.note,
             id: currentNoteId.value,
-            title: form.value.title,
-            is_encrypted: form.value.is_encrypted,
-            is_pinned: form.value.is_pinned,
+            title: contentForm.value.title,
+            is_encrypted: encryptionForm.value.is_encrypted,
+            is_pinned: metaForm.value.is_pinned,
             is_archived: props.note?.is_archived || false,
             is_favorited: props.note?.is_favorited || false,
             tags: props.note?.tags || [],
@@ -353,243 +475,308 @@ function handleShare() {
     <Dialog
         :open="isOpen"
         @update:open="isOpen = $event"
-        :title="isNewNote ? 'New Note' : (isEditing ? 'Edit Note' : note?.title || 'Note')"
-        size="lg"
+        size="2xl"
+        hide-close
+        class="sm:max-w-2xl"
     >
         <template #default>
-            <div
-                class="flex flex-col max-h-[70vh] -mx-6 -mt-2 px-6 pt-2 rounded-t-lg transition-colors"
-                :style="modalBackground"
-            >
-                <!-- Auto-save status -->
-                <div v-if="isEditing" class="flex items-center gap-2 mb-3 text-xs text-muted-foreground">
-                    <Cloud v-if="!autoSaveError && (lastSaved || isSaving)" class="h-3 w-3" />
-                    <CloudOff v-else-if="autoSaveError" class="h-3 w-3 text-destructive" />
-                    <span :class="{ 'text-destructive': autoSaveError }">{{ saveStatusText }}</span>
+            <div class="flex flex-col max-h-[90vh] sm:max-h-[80vh] -m-6">
+                <!-- Header -->
+                <div class="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-border">
+                    <div class="flex items-center gap-2 sm:gap-3">
+                        <div class="hidden sm:flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10 text-primary">
+                            <FileText class="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h2 class="text-base sm:text-lg font-semibold text-foreground">
+                                {{ isNewNote ? 'New Note' : (isEditing ? 'Edit Note' : 'View Note') }}
+                            </h2>
+                            <!-- Auto-save status -->
+                            <div v-if="isEditing" class="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <Cloud v-if="!autoSaveError && (lastSaved || isSaving)" class="h-3 w-3" />
+                                <CloudOff v-else-if="autoSaveError" class="h-3 w-3 text-destructive" />
+                                <span :class="{ 'text-destructive': autoSaveError }">{{ saveStatusText }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <Button variant="ghost" size="icon" @click="handleClose">
+                        <X class="w-5 h-5" />
+                    </Button>
                 </div>
 
-                <!-- Title -->
-                <div class="mb-4">
-                    <Input
-                        ref="titleInput"
-                        v-model="form.title"
-                        placeholder="Title"
-                        :disabled="!isEditing"
-                        :error="errors.title"
-                        :class="cn(
-                            'text-lg font-medium border-0 shadow-none focus:ring-0 px-0 bg-transparent',
-                            !isEditing && 'cursor-default'
-                        )"
-                        @click="!isEditing && startEditing()"
-                    />
-                </div>
-
-                <!-- Content -->
-                <div class="flex-1 min-h-[200px] mb-4">
-                    <Textarea
-                        v-model="form.content"
-                        placeholder="Take a note..."
-                        :disabled="!isEditing"
-                        :rows="8"
-                        :error="errors.content"
-                        :class="cn(
-                            'resize-none border-0 shadow-none focus:ring-0 px-0 bg-transparent h-full',
-                            !isEditing && 'cursor-default'
-                        )"
-                        @click="!isEditing && startEditing()"
-                    />
-                </div>
-
-                <!-- Tags Display -->
-                <div v-if="form.tag_ids.length > 0" class="flex flex-wrap gap-1.5 mb-4">
-                    <Badge
-                        v-for="tagId in form.tag_ids"
-                        :key="tagId"
-                        :color="tags.find(t => t.id === tagId)?.color"
-                        size="sm"
-                    >
-                        {{ tags.find(t => t.id === tagId)?.name }}
-                    </Badge>
-                </div>
-
-                <!-- Options Panel (collapsible) -->
-                <div v-if="isEditing && showOptions" class="border-t border-border pt-4 space-y-4">
-                    <!-- Group Selection -->
-                    <div>
-                        <Label class="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">
-                            <Folder class="h-3 w-3" />
-                            Group
-                        </Label>
-                        <ComboBox
-                            v-model="form.group_id"
-                            :options="groupOptions"
-                            placeholder="Select group..."
+                <!-- Content Area -->
+                <div
+                    class="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-5 transition-colors"
+                    :style="modalBackground"
+                >
+                    <!-- Title -->
+                    <div class="mb-3 sm:mb-4">
+                        <Input
+                            ref="titleInput"
+                            v-model="contentForm.title"
+                            placeholder="Give your note a title..."
+                            :disabled="!isEditing"
+                            :error="errors.title"
+                            :class="cn(
+                                'text-xl sm:text-2xl font-semibold border-0 shadow-none px-0 bg-transparent h-auto',
+                                !isEditing && 'cursor-default'
+                            )"
+                            @click="!isEditing && startEditing()"
                         />
                     </div>
 
-                    <!-- Tags Selection -->
-                    <div>
-                        <Label class="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">
-                            <Tag class="h-3 w-3" />
-                            Tags
-                        </Label>
-                        <ComboBox
-                            v-model="form.tag_ids"
-                            :options="tagOptions"
-                            placeholder="Select tags..."
-                            multiple
+                    <!-- Content -->
+                    <div class="min-h-[150px] sm:min-h-[200px] mb-4">
+                        <Textarea
+                            v-model="contentForm.content"
+                            placeholder="Start writing..."
+                            :disabled="!isEditing"
+                            :rows="8"
+                            :error="errors.content"
+                            :class="cn(
+                                'resize-none border-0 shadow-none px-0 bg-transparent text-base leading-relaxed',
+                                !isEditing && 'cursor-default'
+                            )"
+                            @click="!isEditing && startEditing()"
                         />
                     </div>
 
-                    <!-- Color Selection -->
-                    <div>
-                        <Label class="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">
-                            <Palette class="h-3 w-3" />
-                            Background
-                        </Label>
-                        <div class="flex flex-wrap gap-2">
-                            <button
-                                v-for="color in colorOptions"
-                                :key="color.value"
-                                type="button"
-                                :class="cn(
-                                    'h-7 w-7 rounded-full border-2 transition-all',
-                                    form.color === color.value
-                                        ? 'border-primary ring-2 ring-primary/20'
-                                        : 'border-transparent hover:border-muted-foreground/30',
-                                    color.bg
-                                )"
-                                :style="color.value ? { backgroundColor: color.value } : {}"
-                                :title="color.label"
-                                @click="form.color = color.value"
-                            />
+                    <!-- Tags Display -->
+                    <div v-if="metaForm.tag_ids.length > 0" class="flex flex-wrap gap-1.5 mb-4">
+                        <Badge
+                            v-for="tagId in metaForm.tag_ids"
+                            :key="tagId"
+                            :color="tags.find(t => t.id === tagId)?.color"
+                            size="sm"
+                        >
+                            {{ tags.find(t => t.id === tagId)?.name }}
+                        </Badge>
+                    </div>
+
+                    <!-- Options Panel (collapsible) -->
+                    <div v-if="isEditing" class="border-t border-border/50 pt-4">
+                        <button
+                            type="button"
+                            class="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
+                            @click="showOptions = !showOptions"
+                        >
+                            <component :is="showOptions ? ChevronUp : ChevronDown" class="w-4 h-4" />
+                            {{ showOptions ? 'Hide options' : 'More options' }}
+                        </button>
+
+                        <div v-if="showOptions" class="space-y-5 animate-in slide-in-from-top-2 duration-200">
+                            <!-- Color Selection -->
+                            <div>
+                                <Label class="text-xs text-muted-foreground mb-2 flex items-center gap-1.5">
+                                    <Palette class="h-3.5 w-3.5" />
+                                    Background Color
+                                </Label>
+                                <div class="flex flex-wrap gap-2">
+                                    <button
+                                        v-for="color in colorOptions"
+                                        :key="color.value"
+                                        type="button"
+                                        :class="cn(
+                                            'h-8 w-8 rounded-full border-2 transition-all',
+                                            metaForm.color === color.value
+                                                ? 'ring-2 ring-primary ring-offset-2'
+                                                : 'hover:scale-110',
+                                            color.class
+                                        )"
+                                        :style="color.value ? { backgroundColor: color.value, borderColor: color.value } : {}"
+                                        :title="color.label"
+                                        @click="updateColor(color.value)"
+                                    />
+                                </div>
+                            </div>
+
+                            <!-- Group Selection -->
+                            <div>
+                                <Label class="text-xs text-muted-foreground mb-2 flex items-center gap-1.5">
+                                    <Folder class="h-3.5 w-3.5" />
+                                    Group
+                                </Label>
+                                <ComboBox
+                                    :model-value="metaForm.group_id"
+                                    :options="groupOptions"
+                                    placeholder="Select a group..."
+                                    @update:model-value="updateGroup"
+                                />
+                            </div>
+
+                            <!-- Tags Selection -->
+                            <div>
+                                <Label class="text-xs text-muted-foreground mb-2 flex items-center gap-1.5">
+                                    <Tag class="h-3.5 w-3.5" />
+                                    Tags
+                                </Label>
+                                <ComboBox
+                                    :model-value="metaForm.tag_ids"
+                                    :options="tagOptions"
+                                    placeholder="Select tags..."
+                                    multiple
+                                    @update:model-value="updateTags"
+                                />
+                            </div>
+
+                            <!-- Encryption Section (only for new notes) -->
+                            <div v-if="isNewNote" class="space-y-3">
+                                <div class="flex items-center justify-between py-2">
+                                    <div class="flex items-center gap-2">
+                                        <Lock class="h-4 w-4 text-muted-foreground" />
+                                        <Label class="text-sm font-normal">Encrypt this note</Label>
+                                    </div>
+                                    <Toggle v-model="encryptionForm.is_encrypted" />
+                                </div>
+
+                                <!-- Encryption Info Card -->
+                                <div v-if="encryptionForm.is_encrypted" class="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30 p-3 sm:p-4">
+                                    <div class="flex gap-3">
+                                        <div class="flex-shrink-0">
+                                            <Lock class="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                                        </div>
+                                        <div class="space-y-2 text-sm">
+                                            <p class="font-medium text-amber-800 dark:text-amber-200">About Encrypted Notes</p>
+                                            <ul class="space-y-1 text-amber-700 dark:text-amber-300 list-disc list-inside">
+                                                <li>Content is encrypted with your code and cannot be recovered without it</li>
+                                                <li>Encrypted notes display a blur effect - the actual content is never shown</li>
+                                                <li>Use the hint to help remember your encryption code</li>
+                                                <li>We cannot recover your content if you forget the code</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Encryption Fields -->
+                                <div v-if="encryptionForm.is_encrypted" class="space-y-3 pl-6">
+                                    <Input
+                                        v-model="encryptionForm.encryption_password"
+                                        type="password"
+                                        placeholder="Encryption code"
+                                        :error="errors.encryption_password"
+                                    />
+                                    <Input
+                                        v-model="encryptionForm.encryption_hint"
+                                        placeholder="Hint (optional) - helps you remember the code"
+                                        :error="errors.encryption_hint"
+                                    />
+                                </div>
+                            </div>
+
+                            <!-- Encrypted note indicator (for existing notes) -->
+                            <div v-if="!isNewNote && encryptionForm.is_encrypted" class="rounded-lg border border-muted bg-muted/30 p-3 sm:p-4">
+                                <div class="flex items-center gap-3">
+                                    <Lock class="h-5 w-5 text-muted-foreground" />
+                                    <div>
+                                        <p class="text-sm font-medium">This note is encrypted</p>
+                                        <p class="text-xs text-muted-foreground">Content is hidden and requires your encryption code to view</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Encryption Toggle -->
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-2">
-                            <Lock class="h-4 w-4 text-muted-foreground" />
-                            <Label class="text-sm">Encrypt Note</Label>
+                    <!-- Error display -->
+                    <div v-if="errors.general" class="mt-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+                        {{ errors.general }}
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="border-t border-border px-4 sm:px-6 py-3 sm:py-4 bg-muted/30">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
+                        <!-- Left Actions - scrollable on mobile -->
+                        <div class="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 -mx-1 px-1">
+                            <Button
+                                v-if="isEditing"
+                                variant="ghost"
+                                size="sm"
+                                :class="metaForm.is_pinned ? 'text-primary' : 'text-muted-foreground'"
+                                @click="handleTogglePin"
+                                title="Pin note"
+                            >
+                                <Pin class="h-4 w-4 sm:mr-1.5" :class="{ 'fill-current': metaForm.is_pinned }" />
+                                <span class="hidden sm:inline">{{ metaForm.is_pinned ? 'Pinned' : 'Pin' }}</span>
+                            </Button>
+
+                            <Button
+                                v-if="currentNoteId"
+                                variant="ghost"
+                                size="sm"
+                                class="text-muted-foreground"
+                                @click="handleToggleFavorite"
+                                title="Favorite"
+                            >
+                                <Star class="h-4 w-4 sm:mr-1.5" :class="{ 'fill-yellow-400 text-yellow-400': note?.is_favorited }" />
+                                <span class="hidden sm:inline">Favorite</span>
+                            </Button>
+
+                            <Button
+                                v-if="currentNoteId"
+                                variant="ghost"
+                                size="sm"
+                                class="text-muted-foreground"
+                                @click="handleShare"
+                                title="Share"
+                            >
+                                <Share2 class="h-4 w-4 sm:mr-1.5" />
+                                <span class="hidden sm:inline">Share</span>
+                            </Button>
+
+                            <Button
+                                v-if="currentNoteId"
+                                variant="ghost"
+                                size="sm"
+                                class="text-muted-foreground"
+                                @click="handleArchive"
+                                title="Archive"
+                            >
+                                <Archive class="h-4 w-4 sm:mr-1.5" />
+                                <span class="hidden sm:inline">Archive</span>
+                            </Button>
+
+                            <Button
+                                v-if="currentNoteId"
+                                variant="ghost"
+                                size="sm"
+                                class="text-destructive"
+                                @click="handleDelete"
+                                :disabled="submitting"
+                                title="Delete"
+                            >
+                                <Trash2 class="h-4 w-4 sm:mr-1.5" />
+                                <span class="hidden sm:inline">Delete</span>
+                            </Button>
                         </div>
-                        <Toggle v-model="form.is_encrypted" />
+
+                        <!-- Right Actions -->
+                        <div class="flex items-center justify-end gap-2">
+                            <Button variant="outline" size="sm" class="sm:size-default" @click="handleClose">
+                                Cancel
+                            </Button>
+                            <Button
+                                v-if="isEditing"
+                                size="sm"
+                                class="sm:size-default"
+                                @click="handleSave"
+                                :disabled="!canSave || submitting"
+                            >
+                                <Loader2 v-if="submitting" class="mr-1.5 sm:mr-2 h-4 w-4 animate-spin" />
+                                <Save v-else class="mr-1.5 sm:mr-2 h-4 w-4" />
+                                <span class="hidden sm:inline">{{ submitting ? 'Saving...' : 'Save Note' }}</span>
+                                <span class="sm:hidden">Save</span>
+                            </Button>
+                            <Button
+                                v-else
+                                size="sm"
+                                class="sm:size-default"
+                                @click="startEditing"
+                            >
+                                <span class="hidden sm:inline">Edit Note</span>
+                                <span class="sm:hidden">Edit</span>
+                            </Button>
+                        </div>
                     </div>
-
-                    <!-- Encryption Fields -->
-                    <div v-if="form.is_encrypted && isNewNote" class="space-y-3 pl-6">
-                        <Input
-                            v-model="form.encryption_password"
-                            type="password"
-                            placeholder="Encryption code"
-                            :error="errors.encryption_password"
-                        />
-                        <Input
-                            v-model="form.encryption_hint"
-                            placeholder="Hint (optional)"
-                            :error="errors.encryption_hint"
-                        />
-                    </div>
-                </div>
-
-                <!-- Error display -->
-                <div v-if="errors.general" class="mt-4 p-3 rounded-md bg-destructive/10 text-destructive text-sm">
-                    {{ errors.general }}
-                </div>
-            </div>
-        </template>
-
-        <template #footer>
-            <div class="flex items-center justify-between w-full">
-                <!-- Left Actions -->
-                <div class="flex items-center gap-1">
-                    <Button
-                        v-if="isEditing"
-                        variant="ghost"
-                        size="icon"
-                        :class="form.is_pinned ? 'text-primary' : 'text-muted-foreground'"
-                        @click="handleTogglePin"
-                        title="Pin note"
-                    >
-                        <Pin class="h-4 w-4" :class="{ 'fill-current': form.is_pinned }" />
-                    </Button>
-
-                    <Button
-                        v-if="currentNoteId"
-                        variant="ghost"
-                        size="icon"
-                        class="text-muted-foreground"
-                        @click="handleToggleFavorite"
-                        title="Favorite"
-                    >
-                        <Star class="h-4 w-4" :class="{ 'fill-yellow-400 text-yellow-400': note?.is_favorited }" />
-                    </Button>
-
-                    <Button
-                        v-if="currentNoteId"
-                        variant="ghost"
-                        size="icon"
-                        class="text-muted-foreground"
-                        @click="handleShare"
-                        title="Share"
-                    >
-                        <Share2 class="h-4 w-4" />
-                    </Button>
-
-                    <Button
-                        v-if="currentNoteId"
-                        variant="ghost"
-                        size="icon"
-                        class="text-muted-foreground"
-                        @click="handleArchive"
-                        title="Archive"
-                    >
-                        <Archive class="h-4 w-4" />
-                    </Button>
-
-                    <Button
-                        v-if="isEditing"
-                        variant="ghost"
-                        size="icon"
-                        :class="showOptions ? 'text-primary' : 'text-muted-foreground'"
-                        @click="showOptions = !showOptions"
-                        title="More options"
-                    >
-                        <MoreHorizontal class="h-4 w-4" />
-                    </Button>
-
-                    <Button
-                        v-if="currentNoteId"
-                        variant="ghost"
-                        size="icon"
-                        class="text-destructive"
-                        @click="handleDelete"
-                        :disabled="submitting"
-                        title="Delete"
-                    >
-                        <Trash2 class="h-4 w-4" />
-                    </Button>
-                </div>
-
-                <!-- Right Actions -->
-                <div class="flex items-center gap-2">
-                    <Button variant="ghost" @click="handleClose">
-                        Close
-                    </Button>
-                    <Button
-                        v-if="isEditing"
-                        @click="handleSave"
-                        :disabled="!canSave || submitting"
-                    >
-                        <Loader2 v-if="submitting" class="mr-2 h-4 w-4 animate-spin" />
-                        <Save v-else class="mr-2 h-4 w-4" />
-                        {{ submitting ? 'Saving...' : 'Save' }}
-                    </Button>
-                    <Button
-                        v-else
-                        @click="startEditing"
-                    >
-                        Edit
-                    </Button>
                 </div>
             </div>
         </template>

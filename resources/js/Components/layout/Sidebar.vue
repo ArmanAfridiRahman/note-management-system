@@ -6,8 +6,6 @@ import {
     FileText,
     Home,
     Archive,
-    Tag,
-    Folder,
     Share2,
     Star,
     Lock,
@@ -40,11 +38,6 @@ const mainNavItems: NavItem[] = [
     { name: 'Favorites', href: '/notes?filter=favorites', icon: Star },
     { name: 'Encrypted', href: '/notes?filter=encrypted', icon: Lock },
     { name: 'Archived', href: '/notes/archived', icon: Archive },
-];
-
-const organizationItems: NavItem[] = [
-    { name: 'Tags', href: '/tags', icon: Tag },
-    { name: 'Groups', href: '/groups', icon: Folder },
 ];
 
 const sharingItems: NavItem[] = [
@@ -128,30 +121,6 @@ function isActive(href: string): boolean {
                         {{ item.badge }}
                     </span>
                 </Link>
-            </div>
-
-            <!-- Organization -->
-            <div class="mt-6">
-                <h3 class="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Organization
-                </h3>
-                <div class="space-y-1">
-                    <Link
-                        v-for="item in organizationItems"
-                        :key="item.name"
-                        :href="item.href"
-                        :class="cn(
-                            'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                            isActive(item.href)
-                                ? 'bg-primary text-primary-foreground'
-                                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                        )"
-                        @click="emit('close')"
-                    >
-                        <component :is="item.icon" class="h-4 w-4" />
-                        {{ item.name }}
-                    </Link>
-                </div>
             </div>
 
             <!-- Sharing -->

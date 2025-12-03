@@ -129,8 +129,9 @@ onUnmounted(() => {
             type="button"
             :disabled="disabled"
             :class="cn(
-                'flex min-h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm ring-offset-background',
-                'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+                'flex min-h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm transition-colors',
+                'outline-none ring-0 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0',
+                'focus:border-primary/50',
                 'disabled:cursor-not-allowed disabled:opacity-50',
                 error ? 'border-destructive' : 'border-input',
                 props.class
@@ -188,7 +189,7 @@ onUnmounted(() => {
                         v-model="searchQuery"
                         type="text"
                         :placeholder="searchPlaceholder"
-                        class="w-full rounded-md border border-input bg-background py-1.5 pl-8 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                        class="w-full rounded-md border border-input bg-background py-1.5 pl-8 pr-3 text-sm outline-none ring-0 focus:outline-none focus:ring-0 focus:border-primary/50"
                         @click.stop
                     />
                 </div>

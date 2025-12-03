@@ -6,12 +6,14 @@ interface Props {
     open: boolean;
     title?: string;
     description?: string;
-    size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
+    size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | 'full';
     class?: string;
+    hideClose?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     size: 'md',
+    hideClose: false,
 });
 
 const emit = defineEmits<{
@@ -24,7 +26,12 @@ const sizeClasses = {
     md: 'max-w-md',
     lg: 'max-w-lg',
     xl: 'max-w-xl',
-    full: 'max-w-4xl',
+    '2xl': 'max-w-2xl',
+    '3xl': 'max-w-3xl',
+    '4xl': 'max-w-4xl',
+    '5xl': 'max-w-5xl',
+    '6xl': 'max-w-6xl',
+    full: 'max-w-[95vw]',
 };
 
 const dialogClasses = computed(() =>
@@ -84,6 +91,7 @@ onUnmounted(() => {
                 <div :class="dialogClasses" role="dialog" aria-modal="true">
                     <!-- Close Button -->
                     <button
+                        v-if="!hideClose"
                         class="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                         @click="close"
                     >

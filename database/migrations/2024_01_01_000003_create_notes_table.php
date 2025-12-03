@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->foreignId('group_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('parent_id')->nullable()->constrained('notes')->nullOnDelete(); // For replicated notes
             $table->string('title');
             $table->string('slug');
             $table->longText('content')->nullable();
@@ -24,6 +25,7 @@ return new class extends Migration
             $table->boolean('is_archived')->default(false);
             $table->boolean('is_favorited')->default(false);
             $table->string('color', 7)->nullable(); // Hex color
+            $table->json('meta_data')->nullable(); // Stores parent note state at replication time
             $table->timestamp('archived_at')->nullable();
             $table->timestamp('last_viewed_at')->nullable();
             $table->timestamps();
@@ -32,6 +34,7 @@ return new class extends Migration
             // Indexes for common queries
             $table->index('user_id');
             $table->index('group_id');
+            $table->index('parent_id');
             $table->index('is_archived');
             $table->index('is_encrypted');
             $table->index('created_at');

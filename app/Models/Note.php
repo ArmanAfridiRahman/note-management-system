@@ -18,6 +18,7 @@ class Note extends Model
     protected $fillable = [
         'user_id',
         'group_id',
+        'parent_id',
         'title',
         'slug',
         'content',
@@ -27,9 +28,12 @@ class Note extends Model
         'is_archived',
         'is_favorited',
         'color',
+        'meta_data',
         'archived_at',
         'last_viewed_at',
     ];
+
+    protected $appends = ['encryption_hint'];
 
     protected function casts(): array
     {
@@ -40,7 +44,20 @@ class Note extends Model
             'is_favorited' => 'boolean',
             'archived_at' => 'datetime',
             'last_viewed_at' => 'datetime',
+            'meta_data' => 'array',
         ];
+    }
+
+    /**
+     * Get the encryption hint from the encrypted content.
+     */
+    public function getEncryptionHintAttribute(): ?string
+    {
+        if (!$this->is_encrypted) {
+            return null;
+        }
+
+        return $this->encryptedContent?->hint;
     }
 
     /**
@@ -124,6 +141,78 @@ class Note extends Model
     public function group(): BelongsTo
     {
         return $this->belongsTo(Group::class);
+    }
+
+    /**
+     * Get the parent note (for replicated notes).
+     */
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(Note::class, 'parent_id');
+    }
+
+    /**
+     * Get all notes replicated from this note.
+     */
+    public function children(): HasMany
+    {
+        return $this->hasMany(Note::class, 'parent_id');
+    }
+
+    /**
+     * Check if this note is a replica.
+     */
+    public function isReplica(): bool
+    {
+        return $this->parent_id !== null;
+    }
+
+    /**
+     * Get the parent note's state at replication time (from meta_data).
+     */
+    public function getParentSnapshotAttribute(): ?array
+    {
+        return $this->meta_data['parent_snapshot'] ?? null;
+    }
+
+    /**
+     * Replicate this note as a new note.
+     */
+    public function replicateAsChild(): Note
+    {
+        $replica = $this->replicate(['slug', 'parent_id', 'meta_data']);
+        $replica->parent_id = $this->id;
+        $replica->group_id = null; // Replicated notes start ungrouped
+        $replica->meta_data = [
+            'parent_snapshot' => [
+                'title' => $this->title,
+                'content' => $this->content,
+                'excerpt' => $this->excerpt,
+                'color' => $this->color,
+                'replicated_at' => now()->toISOString(),
+            ],
+        ];
+        $replica->save();
+
+        return $replica;
+    }
+
+    /**
+     * Assign this note to a group.
+     */
+    public function assignToGroup(?Group $group): void
+    {
+        $this->group_id = $group?->id;
+        $this->save();
+    }
+
+    /**
+     * Remove this note from its group.
+     */
+    public function removeFromGroup(): void
+    {
+        $this->group_id = null;
+        $this->save();
     }
 
     /**

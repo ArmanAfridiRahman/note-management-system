@@ -16,11 +16,18 @@ Route::middleware('auth:sanctum')->group(function () {
     // Notes API
     Route::get('/notes', [NoteApiController::class, 'index']);
     Route::get('/notes/search', [NoteApiController::class, 'search']);
+    Route::get('/notes/with-groups', [NoteApiController::class, 'withGroups']);
     Route::get('/notes/{note}', [NoteApiController::class, 'show']);
     Route::post('/notes/{note}/decrypt', [NoteApiController::class, 'decrypt']);
-    Route::patch('/notes/{note}/pin', [NoteApiController::class, 'togglePin']);
-    Route::patch('/notes/{note}/favorite', [NoteApiController::class, 'toggleFavorite']);
+    Route::post('/notes/{note}/toggle-pin', [NoteApiController::class, 'togglePin']);
+    Route::post('/notes/{note}/toggle-favorite', [NoteApiController::class, 'toggleFavorite']);
     Route::patch('/notes/{note}/archive', [NoteApiController::class, 'archive']);
+    Route::patch('/notes/{note}/color', [NoteApiController::class, 'updateColor']);
+    Route::patch('/notes/{note}/tags', [NoteApiController::class, 'updateTags']);
+    Route::post('/notes/{note}/add-to-group', [NoteApiController::class, 'addToGroup']);
+    Route::post('/notes/{note}/remove-from-group', [NoteApiController::class, 'removeFromGroup']);
+    Route::post('/notes/{note}/replicate', [NoteApiController::class, 'replicate']);
+    Route::post('/notes/create-group', [NoteApiController::class, 'createGroupFromNotes']);
 
     // Tags API
     Route::get('/tags', [TagApiController::class, 'index']);
@@ -31,6 +38,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Groups API
     Route::get('/groups', [GroupApiController::class, 'index']);
     Route::post('/groups', [GroupApiController::class, 'store']);
+    Route::post('/groups/merge', [GroupApiController::class, 'merge']);
     Route::put('/groups/{group}', [GroupApiController::class, 'update']);
     Route::delete('/groups/{group}', [GroupApiController::class, 'destroy']);
 

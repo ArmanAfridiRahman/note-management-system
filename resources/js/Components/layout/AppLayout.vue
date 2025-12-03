@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
-import { Button, Input } from '@/Components/ui';
+import { Button } from '@/Components/ui';
 import { ThemeToggle } from '@/Components/shared';
 import Sidebar from './Sidebar.vue';
 import {
     Menu,
-    Search,
     Plus,
     Bell,
     User,
@@ -26,7 +25,6 @@ const page = usePage();
 const user = computed(() => page.props.auth?.user);
 
 const sidebarOpen = ref(false);
-const searchQuery = ref('');
 
 function toggleSidebar() {
     sidebarOpen.value = !sidebarOpen.value;
@@ -52,7 +50,7 @@ function toggleSidebar() {
         <div class="lg:pl-64">
             <!-- Top Header -->
             <header class="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-border bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 lg:px-6">
-                <!-- Left Section: Menu + Search -->
+                <!-- Left Section: Menu + Title -->
                 <div class="flex items-center gap-4">
                     <!-- Mobile menu button -->
                     <Button
@@ -64,18 +62,10 @@ function toggleSidebar() {
                         <Menu class="h-5 w-5" />
                     </Button>
 
-                    <!-- Search Bar -->
-                    <div class="w-64 md:w-80 lg:w-96">
-                        <div class="relative">
-                            <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                            <Input
-                                v-model="searchQuery"
-                                type="search"
-                                placeholder="Search notes..."
-                                class="pl-10"
-                            />
-                        </div>
-                    </div>
+                    <!-- Page Title (optional) -->
+                    <h1 v-if="title" class="text-lg font-semibold text-foreground hidden sm:block">
+                        {{ title }}
+                    </h1>
                 </div>
 
                 <!-- Right Section: Actions -->
@@ -135,11 +125,6 @@ function toggleSidebar() {
 
             <!-- Page Content -->
             <main class="p-4 lg:p-6">
-                <!-- Page Title -->
-                <div v-if="title" class="mb-6">
-                    <h1 class="text-2xl font-bold text-foreground">{{ title }}</h1>
-                </div>
-
                 <slot />
             </main>
         </div>

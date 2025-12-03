@@ -101,7 +101,25 @@ class Group extends Model
      */
     public function notes(): HasMany
     {
-        return $this->hasMany(Note::class);
+        return $this->hasMany(Note::class)->orderBy('is_pinned', 'desc')->orderBy('created_at', 'desc');
+    }
+
+    /**
+     * Add a note to this group.
+     */
+    public function addNote(Note $note): void
+    {
+        $note->update(['group_id' => $this->id]);
+    }
+
+    /**
+     * Remove a note from this group.
+     */
+    public function removeNote(Note $note): void
+    {
+        if ($note->group_id === $this->id) {
+            $note->update(['group_id' => null]);
+        }
     }
 
     /**

@@ -24,6 +24,18 @@ export interface UserData {
     email: string;
 }
 
+export interface ParentSnapshot {
+    title: string;
+    content?: string;
+    excerpt?: string;
+    color?: string;
+    replicated_at: string;
+}
+
+export interface NoteMetaData {
+    parent_snapshot?: ParentSnapshot;
+}
+
 export interface NoteData {
     id: number;
     title: string;
@@ -36,9 +48,14 @@ export interface NoteData {
     is_favorited: boolean;
     color?: string;
     group_id?: number;
+    parent_id?: number;
     group?: GroupData;
+    parent?: NoteData;
+    children?: NoteData[];
+    meta_data?: NoteMetaData;
     tags: TagData[];
     tag_ids?: number[];
+    encryption_hint?: string;
     created_at: string;
     updated_at: string;
 }

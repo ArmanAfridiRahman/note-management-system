@@ -1,43 +1,14 @@
 <script setup lang="ts">
-import { watch, computed } from 'vue';
-import NoteCard from './NoteCard.vue';
+import { ref, computed, watch } from 'vue';
+import DraggableNoteCard from './DraggableNoteCard.vue';
 import NoteShimmer from './NoteShimmer.vue';
 import { EmptyState } from '@/Components/shared';
 import { useInfiniteScroll } from '@/Composables/useInfiniteScroll';
-
-interface Tag {
-    id: number;
-    name: string;
-    slug: string;
-    color: string;
-}
-
-interface Group {
-    id: number;
-    name: string;
-    slug: string;
-    color?: string;
-}
-
-interface Note {
-    id: number;
-    title: string;
-    slug: string;
-    excerpt?: string;
-    is_encrypted: boolean;
-    is_pinned: boolean;
-    is_archived: boolean;
-    is_favorited: boolean;
-    color?: string;
-    created_at: string;
-    updated_at: string;
-    group?: Group;
-    tags: Tag[];
-}
+import type { NoteData } from '@/types/models';
 
 interface Props {
     fetchUrl: string;
-    initialNotes?: Note[];
+    initialNotes?: NoteData[];
     filters?: Record<string, unknown>;
     emptyIcon?: string;
     emptyTitle?: string;
@@ -45,6 +16,7 @@ interface Props {
     emptyActionLabel?: string;
     compact?: boolean;
     gridCols?: 1 | 2 | 3 | 4 | 5;
+    draggable?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -55,17 +27,20 @@ const props = withDefaults(defineProps<Props>(), {
     emptyDescription: 'Create your first note to get started.',
     compact: false,
     gridCols: 3,
+    draggable: true,
 });
 
 const emit = defineEmits<{
-    view: [note: Note];
-    edit: [note: Note];
-    delete: [note: Note];
-    archive: [note: Note];
-    share: [note: Note];
-    togglePin: [note: Note];
-    toggleFavorite: [note: Note];
+    view: [note: NoteData];
+    edit: [note: NoteData];
+    delete: [note: NoteData];
+    archive: [note: NoteData];
+    share: [note: NoteData];
+    togglePin: [note: NoteData];
+    toggleFavorite: [note: NoteData];
     createNew: [];
+    noteDragStart: [note: NoteData, event: DragEvent];
+    noteDragEnd: [note: NoteData, event: DragEvent];
 }>();
 
 const {
@@ -77,7 +52,7 @@ const {
     sentinel,
     refresh,
     updateFilters,
-} = useInfiniteScroll<Note>({
+} = useInfiniteScroll<NoteData>({
     url: props.fetchUrl,
     initialItems: props.initialNotes,
     filters: props.filters,
@@ -86,7 +61,7 @@ const {
 // Expose refresh to parent
 defineExpose({ refresh, updateFilters });
 
-// Watch for filter changes - debounced to prevent rapid refreshes
+// Watch for filter changes
 let filterTimeout: ReturnType<typeof setTimeout> | null = null;
 watch(
     () => props.filters,
@@ -111,6 +86,14 @@ const gridClasses = computed(() => {
 });
 
 const showEmptyState = computed(() => !loading.value && !initialLoading.value && notes.value.length === 0 && !error.value);
+
+const handleDragStart = (note: NoteData, event: DragEvent) => {
+    emit('noteDragStart', note, event);
+};
+
+const handleDragEnd = (note: NoteData, event: DragEvent) => {
+    emit('noteDragEnd', note, event);
+};
 </script>
 
 <template>
@@ -132,11 +115,12 @@ const showEmptyState = computed(() => !loading.value && !initialLoading.value &&
             v-else-if="notes.length > 0"
             :class="['grid gap-4', gridClasses]"
         >
-            <NoteCard
+            <DraggableNoteCard
                 v-for="note in notes"
                 :key="note.id"
                 :note="note"
                 :compact="compact"
+                :draggable="draggable"
                 @view="emit('view', $event)"
                 @edit="emit('edit', $event)"
                 @delete="emit('delete', $event)"
@@ -144,10 +128,12 @@ const showEmptyState = computed(() => !loading.value && !initialLoading.value &&
                 @share="emit('share', $event)"
                 @toggle-pin="emit('togglePin', $event)"
                 @toggle-favorite="emit('toggleFavorite', $event)"
+                @drag-start="handleDragStart"
+                @drag-end="handleDragEnd"
             />
         </div>
 
-        <!-- Loading More State (Shimmer) -->
+        <!-- Loading More State -->
         <NoteShimmer v-if="loading && !initialLoading && notes.length > 0" :count="3" :grid-cols="gridCols" class="mt-4" />
 
         <!-- Infinite Scroll Sentinel -->

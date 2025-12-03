@@ -65,14 +65,53 @@ class NoteController extends Controller
     {
         $user = $request->user();
 
-        $notes = Note::where('user_id', $user->id)
-            ->with(['tags', 'group'])
-            ->archived()
-            ->orderBy('archived_at', 'desc')
-            ->cursorPaginate($request->per_page ?? 20);
+        $tags = Tag::where('user_id', $user->id)->ordered()->get();
+        $groups = Group::where('user_id', $user->id)->root()->ordered()->get();
+        $users = User::where('id', '!=', $user->id)
+            ->select('id', 'name', 'email')
+            ->orderBy('name')
+            ->get();
 
         return Inertia::render('Notes/Archived', [
-            'notes' => $notes,
+            'tags' => $tags,
+            'groups' => $groups,
+            'users' => $users,
+        ]);
+    }
+
+    public function favorites(Request $request): Response
+    {
+        $user = $request->user();
+
+        $tags = Tag::where('user_id', $user->id)->ordered()->get();
+        $groups = Group::where('user_id', $user->id)->root()->ordered()->get();
+        $users = User::where('id', '!=', $user->id)
+            ->select('id', 'name', 'email')
+            ->orderBy('name')
+            ->get();
+
+        return Inertia::render('Notes/Favorites', [
+            'tags' => $tags,
+            'groups' => $groups,
+            'users' => $users,
+        ]);
+    }
+
+    public function encrypted(Request $request): Response
+    {
+        $user = $request->user();
+
+        $tags = Tag::where('user_id', $user->id)->ordered()->get();
+        $groups = Group::where('user_id', $user->id)->root()->ordered()->get();
+        $users = User::where('id', '!=', $user->id)
+            ->select('id', 'name', 'email')
+            ->orderBy('name')
+            ->get();
+
+        return Inertia::render('Notes/Encrypted', [
+            'tags' => $tags,
+            'groups' => $groups,
+            'users' => $users,
         ]);
     }
 
@@ -98,10 +137,21 @@ class NoteController extends Controller
             'tag_ids' => 'nullable|array',
             'tag_ids.*' => 'exists:tags,id',
             'is_encrypted' => 'boolean',
-            'encryption_password' => 'required_if:is_encrypted,true|nullable|string|min:4',
+            'encryption_password' => [
+                'nullable',
+                'string',
+                'min:4',
+                function ($attribute, $value, $fail) use ($request) {
+                    if ($request->boolean('is_encrypted') && empty($value)) {
+                        $fail('The encryption password is required when encryption is enabled.');
+                    }
+                },
+            ],
             'encryption_hint' => 'nullable|string|max:255',
             'color' => 'nullable|string|max:7',
             'is_pinned' => 'boolean',
+            'is_favorited' => 'boolean',
+            'is_archived' => 'boolean',
         ]);
 
         $user = $request->user();
@@ -115,6 +165,8 @@ class NoteController extends Controller
             'is_encrypted' => $validated['is_encrypted'] ?? false,
             'color' => $validated['color'] ?? null,
             'is_pinned' => $validated['is_pinned'] ?? false,
+            'is_favorited' => $validated['is_favorited'] ?? false,
+            'is_archived' => $validated['is_archived'] ?? false,
         ]);
 
         // Handle encryption

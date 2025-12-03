@@ -33,8 +33,9 @@ const hasSlotContent = computed(() => !!slots.default);
 
 const selectClasses = computed(() =>
     cn(
-        'flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm ring-offset-background',
-        'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+        'flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm transition-colors',
+        'outline-none ring-0 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0',
+        'focus:border-primary/50',
         'disabled:cursor-not-allowed disabled:opacity-50',
         props.error ? 'border-destructive' : 'border-input',
         props.class

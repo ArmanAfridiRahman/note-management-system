@@ -10,21 +10,23 @@ interface Props {
     users?: UserData[];
 }
 
-const props = defineProps<Props>();
+defineProps<Props>();
 </script>
 
 <template>
-    <Head title="Notes" />
+    <Head title="Encrypted Notes" />
 
-    <AppLayout title="All Notes">
+    <AppLayout title="Encrypted Notes">
         <NotesSection
             fetch-url="/api/notes"
+            :filters="{ filter: 'encrypted' }"
             :tags="tags"
             :groups="groups"
             :users="users"
             :show-quick-input="true"
-            empty-title="No notes found"
-            empty-description="Create your first note by clicking the input above."
+            :default-note-values="{ is_encrypted: true }"
+            empty-title="No encrypted notes"
+            empty-description="Encrypted notes will appear here. Create one to secure your private content."
         />
     </AppLayout>
 </template>
