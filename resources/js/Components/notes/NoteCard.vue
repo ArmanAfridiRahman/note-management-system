@@ -181,6 +181,15 @@ const handleClick = () => {
         @drop="handleDrop"
         @click="handleClick"
     >
+        <!-- Floating Pin Indicator -->
+        <div
+            v-if="note.is_pinned && !showDropPreview"
+            class="absolute -top-2 -right-2 z-20 w-7 h-7 rounded-full bg-primary flex items-center justify-center shadow-md border-2 border-background"
+            @click.stop="emit('togglePin', note)"
+            title="Unpin"
+        >
+            <Pin class="h-3.5 w-3.5 text-primary-foreground fill-current" />
+        </div>
         <!-- Locked State for Encrypted Notes -->
         <div
             v-if="isLocked && !showDropPreview"
@@ -203,13 +212,8 @@ const handleClick = () => {
             </div>
 
             <!-- Status icons in corner -->
-            <div class="absolute top-3 left-3 flex items-center gap-1.5">
-                <Pin
-                    v-if="note.is_pinned"
-                    class="h-4 w-4 text-amber-600 dark:text-amber-400"
-                />
+            <div v-if="note.is_favorited" class="absolute top-3 left-3 flex items-center gap-1.5">
                 <Star
-                    v-if="note.is_favorited"
                     class="h-4 w-4 fill-amber-400 text-amber-400"
                 />
             </div>
@@ -275,18 +279,16 @@ const handleClick = () => {
 
                 <!-- Quick Actions -->
                 <div class="flex items-center gap-0.5 -mr-1 -mt-1">
-                    <!-- Pin Button (always visible on hover) -->
+                    <!-- Pin Button (only for unpinned notes, shown on hover) -->
                     <Button
+                        v-if="!note.is_pinned"
                         variant="ghost"
                         size="icon"
-                        :class="[
-                            'h-7 w-7 transition-opacity',
-                            note.is_pinned ? 'opacity-100 text-amber-600 dark:text-amber-400' : 'opacity-0 group-hover:opacity-100'
-                        ]"
+                        class="h-7 w-7 transition-opacity opacity-0 group-hover:opacity-100"
                         @click.stop="emit('togglePin', note)"
-                        :title="note.is_pinned ? 'Unpin' : 'Pin'"
+                        title="Pin"
                     >
-                        <Pin class="h-4 w-4" :class="{ 'fill-current': note.is_pinned }" />
+                        <Pin class="h-4 w-4" />
                     </Button>
 
                     <!-- Actions Menu -->
