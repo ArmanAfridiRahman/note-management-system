@@ -78,9 +78,9 @@ class GroupApiController extends Controller
         }
 
         $validated = $request->validate([
-            'name' => 'required|string|max:100',
-            'color' => 'nullable|string|max:7',
-            'parent_id' => 'nullable|exists:groups,id',
+            'name' => 'sometimes|required|string|max:100',
+            'color' => 'sometimes|nullable|string|max:7',
+            'parent_id' => 'sometimes|nullable|exists:groups,id',
         ]);
 
         // Prevent setting itself or its children as parent
@@ -101,11 +101,19 @@ class GroupApiController extends Controller
             }
         }
 
-        $group->update([
-            'name' => $validated['name'],
-            'color' => $validated['color'] ?? null,
-            'parent_id' => $validated['parent_id'] ?? null,
-        ]);
+        // Only update fields that were provided
+        $updateData = [];
+        if (array_key_exists('name', $validated)) {
+            $updateData['name'] = $validated['name'];
+        }
+        if (array_key_exists('color', $validated)) {
+            $updateData['color'] = $validated['color'];
+        }
+        if (array_key_exists('parent_id', $validated)) {
+            $updateData['parent_id'] = $validated['parent_id'];
+        }
+
+        $group->update($updateData);
 
         return response()->json([
             'success' => true,

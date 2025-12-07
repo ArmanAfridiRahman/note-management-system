@@ -15,7 +15,13 @@ interface Props {
 
 const props = defineProps<Props>();
 
-const defaultColors = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'];
+const defaultColors = [
+    'var(--color-chart-1)',
+    'var(--color-chart-2)',
+    'var(--color-chart-3)',
+    'var(--color-chart-4)',
+    'var(--color-chart-5)',
+];
 
 const chartData = computed(() =>
     props.notes.map((note, index) => ({

@@ -21,11 +21,11 @@ interface Props {
 const props = defineProps<Props>();
 
 const categories = computed(() => [
-    { name: 'Pinned', value: props.noteStates.pinned, color: '#3b82f6' },
-    { name: 'Favorites', value: props.noteStates.favorites, color: '#f59e0b' },
-    { name: 'Encrypted', value: props.noteStates.encrypted, color: '#10b981' },
-    { name: 'Archived', value: props.noteStates.archived, color: '#6b7280' },
-    { name: 'Regular', value: props.noteStates.regular, color: '#a3a3a3' },
+    { name: 'Pinned', value: props.noteStates.pinned, color: 'var(--color-chart-1)' },
+    { name: 'Favorites', value: props.noteStates.favorites, color: 'var(--color-chart-2)' },
+    { name: 'Encrypted', value: props.noteStates.encrypted, color: 'var(--color-chart-3)' },
+    { name: 'Archived', value: props.noteStates.archived, color: 'var(--color-chart-4)' },
+    { name: 'Regular', value: props.noteStates.regular, color: 'var(--color-chart-5)' },
 ]);
 
 const maxValue = computed(() => Math.max(...categories.value.map(c => c.value), 1));

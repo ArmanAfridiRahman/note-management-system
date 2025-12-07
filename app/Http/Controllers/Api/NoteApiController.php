@@ -36,6 +36,9 @@ class NoteApiController extends Controller
                     'favorites' => $query->favorited(),
                     'encrypted' => $query->encrypted(),
                     'pinned' => $query->pinned(),
+                    'regular' => $query->where('is_pinned', false)
+                        ->where('is_favorited', false)
+                        ->where('is_encrypted', false),
                     default => null,
                 };
             }

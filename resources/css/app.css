@@ -6,10 +6,10 @@
 
 @layer base {
     :root {
-        /* Light mode - 3 main colors (no gradients) */
-        --color-primary: #1a1a2e;
+        /* Light mode - red primary theme */
+        --color-primary: #e94560;
         --color-primary-foreground: #ffffff;
-        --color-secondary: #16213e;
+        --color-secondary: #1a1a2e;
         --color-secondary-foreground: #ffffff;
         --color-accent: #e94560;
         --color-accent-foreground: #ffffff;
@@ -21,16 +21,23 @@
         --color-muted-foreground: #6b7280;
         --color-border: #e5e7eb;
         --color-input: #e5e7eb;
-        --color-ring: #1a1a2e;
+        --color-ring: #e94560;
         --color-destructive: #dc2626;
         --color-destructive-foreground: #ffffff;
+
+        /* Chart colors - shades of primary red */
+        --color-chart-1: #e94560;
+        --color-chart-2: #f06b7e;
+        --color-chart-3: #f7919e;
+        --color-chart-4: #fdb7be;
+        --color-chart-5: #fddde0;
 
         /* Border radius */
         --radius: 0.5rem;
     }
 
     .dark {
-        /* Dark mode - same 3 main colors */
+        /* Dark mode - red primary theme */
         --color-primary: #e94560;
         --color-primary-foreground: #ffffff;
         --color-secondary: #1a1a2e;
@@ -48,6 +55,13 @@
         --color-ring: #e94560;
         --color-destructive: #ef4444;
         --color-destructive-foreground: #ffffff;
+
+        /* Chart colors - shades of primary red (darker for dark mode) */
+        --color-chart-1: #e94560;
+        --color-chart-2: #c73a52;
+        --color-chart-3: #a52f44;
+        --color-chart-4: #832436;
+        --color-chart-5: #611928;
     }
 
     * {

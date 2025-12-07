@@ -52,7 +52,7 @@ const isOpen = computed({
 // Group editing state
 const isEditingGroupName = ref(false);
 const groupName = ref('');
-const groupNameInput = ref<HTMLInputElement | null>(null);
+const groupNameInput = ref<{ focus: () => void; select: () => void } | null>(null);
 
 // Selected note for editing
 const selectedNote = ref<NoteData | null>(null);

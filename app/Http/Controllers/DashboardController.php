@@ -19,30 +19,34 @@ class DashboardController extends Controller
         // Note state statistics for the chart
         $noteStates = [
             'total' => Note::where('user_id', $user->id)->count(),
-            'pinned' => Note::where('user_id', $user->id)->where('is_pinned', true)->count(),
-            'favorites' => Note::where('user_id', $user->id)->where('is_favorited', true)->count(),
-            'encrypted' => Note::where('user_id', $user->id)->where('is_encrypted', true)->count(),
+            'pinned' => Note::where('user_id', $user->id)->active()->where('is_pinned', true)->count(),
+            'favorites' => Note::where('user_id', $user->id)->active()->where('is_favorited', true)->count(),
+            'encrypted' => Note::where('user_id', $user->id)->active()->where('is_encrypted', true)->count(),
             'archived' => Note::where('user_id', $user->id)->where('is_archived', true)->count(),
             'regular' => Note::where('user_id', $user->id)
+                ->active()
                 ->where('is_pinned', false)
                 ->where('is_favorited', false)
                 ->where('is_encrypted', false)
-                ->where('is_archived', false)
                 ->count(),
             // Overlapping states
             'pinned_favorite' => Note::where('user_id', $user->id)
+                ->active()
                 ->where('is_pinned', true)
                 ->where('is_favorited', true)
                 ->count(),
             'pinned_encrypted' => Note::where('user_id', $user->id)
+                ->active()
                 ->where('is_pinned', true)
                 ->where('is_encrypted', true)
                 ->count(),
             'favorite_encrypted' => Note::where('user_id', $user->id)
+                ->active()
                 ->where('is_favorited', true)
                 ->where('is_encrypted', true)
                 ->count(),
             'pinned_favorite_encrypted' => Note::where('user_id', $user->id)
+                ->active()
                 ->where('is_pinned', true)
                 ->where('is_favorited', true)
                 ->where('is_encrypted', true)
@@ -51,39 +55,10 @@ class DashboardController extends Controller
 
         // Top 5 most opened notes
         $topOpenedNotes = Note::where('user_id', $user->id)
-            ->where('is_archived', false)
+            ->active()
             ->orderBy('open_count', 'desc')
             ->limit(5)
             ->get(['id', 'title', 'open_count', 'color']);
-
-        // Top 10 pinned notes
-        $pinnedNotes = Note::where('user_id', $user->id)
-            ->where('is_pinned', true)
-            ->where('is_archived', false)
-            ->with(['tags', 'group'])
-            ->orderBy('updated_at', 'desc')
-            ->limit(10)
-            ->get();
-
-        // Top 10 favorite notes
-        $favoriteNotes = Note::where('user_id', $user->id)
-            ->where('is_favorited', true)
-            ->where('is_archived', false)
-            ->with(['tags', 'group'])
-            ->orderBy('updated_at', 'desc')
-            ->limit(10)
-            ->get();
-
-        // Regular notes (not pinned, not favorited, not encrypted, not archived)
-        $regularNotes = Note::where('user_id', $user->id)
-            ->where('is_pinned', false)
-            ->where('is_favorited', false)
-            ->where('is_encrypted', false)
-            ->where('is_archived', false)
-            ->with(['tags', 'group'])
-            ->orderBy('updated_at', 'desc')
-            ->limit(20)
-            ->get();
 
         // Tags and groups for the notes section
         $tags = Tag::where('user_id', $user->id)->ordered()->get();
@@ -98,9 +73,6 @@ class DashboardController extends Controller
         return Inertia::render('Dashboard', [
             'noteStates' => $noteStates,
             'topOpenedNotes' => $topOpenedNotes,
-            'pinnedNotes' => $pinnedNotes,
-            'favoriteNotes' => $favoriteNotes,
-            'regularNotes' => $regularNotes,
             'tags' => $tags,
             'groups' => $groups,
             'users' => $users,
