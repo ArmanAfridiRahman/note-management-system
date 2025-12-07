@@ -28,6 +28,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/notes/{note}/add-to-group', [NoteApiController::class, 'addToGroup']);
     Route::post('/notes/{note}/remove-from-group', [NoteApiController::class, 'removeFromGroup']);
     Route::post('/notes/{note}/replicate', [NoteApiController::class, 'replicate']);
+    Route::post('/notes/{note}/open', [NoteApiController::class, 'incrementOpenCount']);
     Route::post('/notes/create-group', [NoteApiController::class, 'createGroupFromNotes']);
 
     // Tags API

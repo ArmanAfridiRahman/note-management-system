@@ -401,6 +401,21 @@ class NoteApiController extends Controller
     }
 
     /**
+     * Increment note open count
+     */
+    public function incrementOpenCount(Request $request, Note $note): JsonResponse
+    {
+        $this->authorize('view', $note);
+
+        $note->incrementOpenCount();
+
+        return response()->json([
+            'success' => true,
+            'data' => ['open_count' => $note->open_count],
+        ]);
+    }
+
+    /**
      * Create a group from two notes (drag note onto another note)
      */
     public function createGroupFromNotes(Request $request): JsonResponse

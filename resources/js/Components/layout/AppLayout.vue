@@ -6,8 +6,6 @@ import { ThemeToggle } from '@/Components/shared';
 import Sidebar from './Sidebar.vue';
 import {
     Menu,
-    Plus,
-    Bell,
     User,
     LogOut,
     Settings,
@@ -70,24 +68,8 @@ function toggleSidebar() {
 
                 <!-- Right Section: Actions -->
                 <div class="flex items-center gap-2">
-                    <!-- Create Note Button -->
-                    <Link href="/notes/create">
-                        <Button size="sm" class="hidden sm:flex">
-                            <Plus class="mr-2 h-4 w-4" />
-                            New Note
-                        </Button>
-                        <Button size="icon" class="sm:hidden">
-                            <Plus class="h-4 w-4" />
-                        </Button>
-                    </Link>
-
                     <!-- Theme Toggle -->
                     <ThemeToggle />
-
-                    <!-- Notifications -->
-                    <Button variant="ghost" size="icon">
-                        <Bell class="h-5 w-5" />
-                    </Button>
 
                     <!-- User Menu -->
                     <Dropdown align="right">

@@ -46,6 +46,7 @@ export interface NoteData {
     is_pinned: boolean;
     is_archived: boolean;
     is_favorited: boolean;
+    open_count?: number;
     color?: string;
     group_id?: number;
     parent_id?: number;
@@ -56,6 +57,7 @@ export interface NoteData {
     tags: TagData[];
     tag_ids?: number[];
     encryption_hint?: string;
+    archived_at?: string;
     created_at: string;
     updated_at: string;
 }

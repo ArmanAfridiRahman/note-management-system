@@ -27,6 +27,7 @@ class Note extends Model
         'is_pinned',
         'is_archived',
         'is_favorited',
+        'open_count',
         'color',
         'meta_data',
         'archived_at',
@@ -381,6 +382,16 @@ class Note extends Model
      */
     public function recordView(): void
     {
+        $this->last_viewed_at = now();
+        $this->saveQuietly();
+    }
+
+    /**
+     * Increment the open count.
+     */
+    public function incrementOpenCount(): void
+    {
+        $this->increment('open_count');
         $this->last_viewed_at = now();
         $this->saveQuietly();
     }
