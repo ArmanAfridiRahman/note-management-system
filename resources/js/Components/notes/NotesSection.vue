@@ -205,6 +205,16 @@ const handleAddToGroup = async (noteId: number, groupId: number) => {
     }
 };
 
+// Remove note from group (drag out of group)
+const handleRemoveFromGroup = async (noteId: number) => {
+    try {
+        await axios.post(`/api/notes/${noteId}/remove-from-group`);
+        noteGridRef.value?.refresh();
+    } catch (error: any) {
+        console.error('Failed to remove note from group:', error);
+    }
+};
+
 const handleViewGroup = (group: GroupData, notes: NoteData[] = []) => {
     selectedGroup.value = group;
     selectedGroupNotes.value = notes;
@@ -371,6 +381,7 @@ const closeMergeModal = () => {
             @create-new="handleCreateNew"
             @create-group="handleCreateGroup"
             @add-to-group="handleAddToGroup"
+            @remove-from-group="handleRemoveFromGroup"
             @merge-groups="handleMergeGroups"
             @view-group="handleViewGroup"
         />

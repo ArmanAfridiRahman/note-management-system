@@ -22,12 +22,15 @@ const emit = defineEmits<{
     removeFromGroup: [noteId: number, groupId: number];
     dragStart: [group: GroupData, event: DragEvent];
     dragEnd: [group: GroupData, event: DragEvent];
+    noteDragStart: [note: NoteData, groupId: number, event: DragEvent];
+    noteDragEnd: [note: NoteData, event: DragEvent];
     drop: [group: GroupData, event: DragEvent];
     dragOver: [group: GroupData, event: DragEvent];
     dragLeave: [group: GroupData, event: DragEvent];
 }>();
 
 const isDragging = ref(false);
+const isDraggingNote = ref<number | null>(null);
 const isHoveredForDrop = ref(false);
 const currentStartIndex = ref(0);
 
@@ -130,6 +133,31 @@ const handleClick = (event: Event) => {
     event.stopPropagation();
     emit('viewGroup', props.group);
 };
+
+// Mini note drag handlers
+const handleMiniNoteDragStart = (note: NoteData, event: DragEvent) => {
+    if (!props.draggable) return;
+    event.stopPropagation();
+    isDraggingNote.value = note.id;
+
+    if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('application/json', JSON.stringify({
+            type: 'note-from-group',
+            noteId: note.id,
+            noteTitle: note.title,
+            groupId: props.group.id,
+            groupName: props.group.name,
+        }));
+    }
+
+    emit('noteDragStart', note, props.group.id, event);
+};
+
+const handleMiniNoteDragEnd = (note: NoteData, event: DragEvent) => {
+    isDraggingNote.value = null;
+    emit('noteDragEnd', note, event);
+};
 </script>
 
 <template>
@@ -165,9 +193,14 @@ const handleClick = (event: Event) => {
                     class="rounded-lg border bg-card overflow-hidden transition-all relative"
                     :class="[
                         !note.color && 'border-border/50',
-                        note.is_encrypted ? 'p-0' : 'p-1.5 flex flex-col'
+                        note.is_encrypted ? 'p-0' : 'p-1.5 flex flex-col',
+                        draggable && 'cursor-grab active:cursor-grabbing hover:ring-1 hover:ring-primary/50',
+                        isDraggingNote === note.id && 'opacity-50 scale-95'
                     ]"
                     :style="getMiniCardStyles(note)"
+                    :draggable="draggable"
+                    @dragstart="handleMiniNoteDragStart(note, $event)"
+                    @dragend="handleMiniNoteDragEnd(note, $event)"
                 >
                     <!-- Locked State for Encrypted Notes -->
                     <template v-if="note.is_encrypted">

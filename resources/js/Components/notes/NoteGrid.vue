@@ -54,12 +54,19 @@ const emit = defineEmits<{
     createNew: [];
     createGroup: [sourceNoteId: number, targetNoteId: number];
     addToGroup: [noteId: number, groupId: number];
+    removeFromGroup: [noteId: number];
     mergeGroups: [sourceGroup: GroupData, targetGroup: GroupData];
     viewGroup: [group: GroupData, notes: NoteData[]];
 }>();
 
 // Track dragging group
 const draggingGroup = ref<{ id: number; name: string } | null>(null);
+
+// Track dragging note from group
+const draggingNoteFromGroup = ref<{ noteId: number; groupId: number } | null>(null);
+
+// Grid drop zone state
+const isGridDropZone = ref(false);
 
 const {
     items: displayItems,
@@ -191,10 +198,77 @@ const onGroupDragStart = (group: GroupData, _event: DragEvent) => {
 const onGroupDragEnd = (_group: GroupData, _event: DragEvent) => {
     draggingGroup.value = null;
 };
+
+// Track when a note from a group starts being dragged
+const onNoteFromGroupDragStart = (note: NoteData, groupId: number, _event: DragEvent) => {
+    draggingNoteFromGroup.value = { noteId: note.id, groupId };
+};
+
+// Clear dragging note from group when drag ends
+const onNoteFromGroupDragEnd = (_note: NoteData, _event: DragEvent) => {
+    draggingNoteFromGroup.value = null;
+    isGridDropZone.value = false;
+};
+
+// Grid drop zone handlers
+const onGridDragOver = (event: DragEvent) => {
+    if (!draggingNoteFromGroup.value) return;
+    event.preventDefault();
+    if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = 'move';
+    }
+    isGridDropZone.value = true;
+};
+
+const onGridDragLeave = (event: DragEvent) => {
+    const relatedTarget = event.relatedTarget as HTMLElement | null;
+    const currentTarget = event.currentTarget as HTMLElement;
+    if (relatedTarget && currentTarget.contains(relatedTarget)) {
+        return;
+    }
+    isGridDropZone.value = false;
+};
+
+const onGridDrop = (event: DragEvent) => {
+    event.preventDefault();
+    isGridDropZone.value = false;
+
+    const data = event.dataTransfer?.getData('application/json');
+    if (!data) return;
+
+    try {
+        const parsed = JSON.parse(data);
+        if (parsed.type === 'note-from-group' && parsed.noteId) {
+            emit('removeFromGroup', parsed.noteId);
+        }
+    } catch (e) {
+        console.error('Failed to parse drop data:', e);
+    }
+
+    draggingNoteFromGroup.value = null;
+};
 </script>
 
 <template>
-    <div>
+    <div
+        @dragover="onGridDragOver"
+        @dragleave="onGridDragLeave"
+        @drop="onGridDrop"
+        :class="[
+            'relative transition-all',
+            isGridDropZone && 'ring-2 ring-primary ring-offset-4 rounded-lg'
+        ]"
+    >
+        <!-- Drop Zone Indicator -->
+        <div
+            v-if="isGridDropZone"
+            class="absolute inset-0 bg-primary/5 rounded-lg pointer-events-none z-10 flex items-center justify-center"
+        >
+            <div class="bg-primary text-primary-foreground px-4 py-2 rounded-full text-sm font-medium shadow-lg">
+                Drop here to remove from group
+            </div>
+        </div>
+
         <!-- Error State -->
         <div
             v-if="error"
@@ -246,6 +320,8 @@ const onGroupDragEnd = (_group: GroupData, _event: DragEvent) => {
                             @view-group="emit('viewGroup', item.group, item.notes)"
                             @drag-start="onGroupDragStart"
                             @drag-end="onGroupDragEnd"
+                            @note-drag-start="onNoteFromGroupDragStart"
+                            @note-drag-end="onNoteFromGroupDragEnd"
                             @drop="(group, event) => onNoteStackDrop(group, event)"
                         />
                     </template>
@@ -292,6 +368,8 @@ const onGroupDragEnd = (_group: GroupData, _event: DragEvent) => {
                             @view-group="emit('viewGroup', item.group, item.notes)"
                             @drag-start="onGroupDragStart"
                             @drag-end="onGroupDragEnd"
+                            @note-drag-start="onNoteFromGroupDragStart"
+                            @note-drag-end="onNoteFromGroupDragEnd"
                             @drop="(group, event) => onNoteStackDrop(group, event)"
                         />
                     </template>
