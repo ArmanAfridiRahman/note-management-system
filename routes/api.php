@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\GroupApiController;
 use App\Http\Controllers\Api\NoteApiController;
 use App\Http\Controllers\Api\ShareApiController;
 use App\Http\Controllers\Api\TagApiController;
+use App\Http\Controllers\Api\UserApiController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -47,4 +48,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/shared/by-me', [ShareApiController::class, 'sharedByMe']);
     Route::post('/shares', [ShareApiController::class, 'store']);
     Route::delete('/shares/{share}', [ShareApiController::class, 'destroy']);
+
+    // User Preferences API
+    Route::get('/user/preferences', [UserApiController::class, 'preferences']);
+    Route::put('/user/preferences', [UserApiController::class, 'updatePreferences']);
 });

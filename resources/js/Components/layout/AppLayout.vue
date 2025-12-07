@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
-import { Button } from '@/Components/ui';
+import { Button, ToastContainer } from '@/Components/ui';
 import { ThemeToggle } from '@/Components/shared';
 import Sidebar from './Sidebar.vue';
 import {
@@ -128,5 +128,8 @@ function toggleSidebar() {
                 <slot />
             </main>
         </div>
+
+        <!-- Toast Notifications -->
+        <ToastContainer />
     </div>
 </template>

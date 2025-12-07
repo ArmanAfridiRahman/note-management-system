@@ -1,49 +1,34 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { Head, usePage } from '@inertiajs/vue3';
+import axios from 'axios';
 import { AppLayout } from '@/Components/layout';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button, Toggle, Label, Select } from '@/Components/ui';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button, Toggle, Label, Input } from '@/Components/ui';
 import { ThemeToggle } from '@/Components/shared';
-import { Settings, Palette, Bell, Shield, Download, Trash2 } from 'lucide-vue-next';
+import { useToast } from '@/Composables/useToast';
+import { Settings, Palette, Shield, Download, Trash2 } from 'lucide-vue-next';
 
 const page = usePage();
+const { success, error } = useToast();
 const saving = ref(false);
 
 const preferences = ref({
-    default_note_color: '',
-    notes_per_page: '20',
-    email_notifications: true,
+    notes_per_page: 20,
     auto_save: true,
 });
-
-const colorOptions = [
-    { value: '', label: 'None' },
-    { value: '#ef4444', label: 'Red' },
-    { value: '#f97316', label: 'Orange' },
-    { value: '#eab308', label: 'Yellow' },
-    { value: '#22c55e', label: 'Green' },
-    { value: '#3b82f6', label: 'Blue' },
-    { value: '#8b5cf6', label: 'Purple' },
-];
 
 const savePreferences = async () => {
     saving.value = true;
     try {
-        const response = await fetch('/api/user/preferences', {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-            },
-            body: JSON.stringify(preferences.value),
-        });
-
-        const data = await response.json();
+        const { data } = await axios.put('/api/user/preferences', preferences.value);
         if (data.success) {
-            // Show success notification
+            success('Preferences saved successfully');
+        } else {
+            error('Failed to save preferences');
         }
-    } catch (error) {
-        console.error('Failed to save preferences:', error);
+    } catch (err) {
+        console.error('Failed to save preferences:', err);
+        error('Failed to save preferences');
     } finally {
         saving.value = false;
     }
@@ -51,14 +36,11 @@ const savePreferences = async () => {
 
 const exportData = async () => {
     try {
-        const response = await fetch('/api/user/export', {
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-            },
+        const response = await axios.get('/api/user/export', {
+            responseType: 'blob',
         });
 
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
+        const url = window.URL.createObjectURL(response.data);
         const a = document.createElement('a');
         a.href = url;
         a.download = 'notes-export.json';
@@ -66,8 +48,9 @@ const exportData = async () => {
         a.click();
         window.URL.revokeObjectURL(url);
         a.remove();
-    } catch (error) {
-        console.error('Failed to export data:', error);
+    } catch (err) {
+        console.error('Failed to export data:', err);
+        error('Failed to export data');
     }
 };
 </script>
@@ -88,7 +71,7 @@ const exportData = async () => {
                         Customize how the app looks and feels.
                     </CardDescription>
                 </CardHeader>
-                <CardContent class="space-y-4">
+                <CardContent>
                     <div class="flex items-center justify-between">
                         <div>
                             <Label>Theme</Label>
@@ -97,55 +80,6 @@ const exportData = async () => {
                             </p>
                         </div>
                         <ThemeToggle />
-                    </div>
-
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <Label>Default Note Color</Label>
-                            <p class="text-sm text-muted-foreground">
-                                Color for new notes (optional).
-                            </p>
-                        </div>
-                        <div class="flex gap-2">
-                            <button
-                                v-for="color in colorOptions"
-                                :key="color.value"
-                                type="button"
-                                class="h-6 w-6 rounded-full border-2 transition-all"
-                                :class="[
-                                    preferences.default_note_color === color.value
-                                        ? 'border-primary scale-110'
-                                        : 'border-transparent hover:border-muted-foreground/50'
-                                ]"
-                                :style="{ backgroundColor: color.value || 'var(--muted)' }"
-                                :title="color.label"
-                                @click="preferences.default_note_color = color.value"
-                            />
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-
-            <!-- Notifications -->
-            <Card variant="outlined">
-                <CardHeader>
-                    <div class="flex items-center gap-2">
-                        <Bell class="h-5 w-5" />
-                        <CardTitle>Notifications</CardTitle>
-                    </div>
-                    <CardDescription>
-                        Manage your notification preferences.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent class="space-y-4">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <Label>Email Notifications</Label>
-                            <p class="text-sm text-muted-foreground">
-                                Receive email notifications for shared notes.
-                            </p>
-                        </div>
-                        <Toggle v-model="preferences.email_notifications" />
                     </div>
                 </CardContent>
             </Card>
@@ -179,12 +113,13 @@ const exportData = async () => {
                                 Number of notes to load at once.
                             </p>
                         </div>
-                        <Select v-model="preferences.notes_per_page" class="w-24">
-                            <option value="10">10</option>
-                            <option value="20">20</option>
-                            <option value="50">50</option>
-                            <option value="100">100</option>
-                        </Select>
+                        <Input
+                            v-model="preferences.notes_per_page"
+                            type="number"
+                            min="5"
+                            max="100"
+                            class="w-20 text-center"
+                        />
                     </div>
                 </CardContent>
             </Card>

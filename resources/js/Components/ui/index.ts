@@ -17,6 +17,7 @@ export { default as CardFooter } from './CardFooter.vue';
 export { default as Badge } from './Badge.vue';
 export { default as Skeleton } from './Skeleton.vue';
 export { default as Toast } from './Toast.vue';
+export { default as ToastContainer } from './ToastContainer.vue';
 
 // Overlay Components
 export { default as Dialog } from './Dialog.vue';

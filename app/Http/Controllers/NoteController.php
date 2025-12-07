@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\EncryptedNote;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Arr;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -155,12 +156,12 @@ class NoteController extends Controller
         ]);
 
         $user = $request->user();
-
+        
         // Create the note
         $note = Note::create([
             'user_id' => $user->id,
             'title' => $validated['title'],
-            'content' => $validated['is_encrypted'] ? null : ($validated['content'] ?? ''),
+            'content' => Arr::get($validated, 'content'),
             'group_id' => $validated['group_id'] ?? null,
             'is_encrypted' => $validated['is_encrypted'] ?? false,
             'color' => $validated['color'] ?? null,
@@ -170,7 +171,7 @@ class NoteController extends Controller
         ]);
 
         // Handle encryption
-        if ($validated['is_encrypted'] && !empty($validated['content'])) {
+        if (Arr::get($validated, 'is_encrypted') && !empty($validated['content'])) {
             $encryptedData = EncryptedNote::encryptContent(
                 $validated['content'],
                 $validated['encryption_password']
@@ -189,13 +190,14 @@ class NoteController extends Controller
             $note->tags()->attach($validated['tag_ids']);
         }
 
-        // Return JSON for AJAX requests
-        if ($request->wantsJson() || $request->ajax()) {
+        // Return JSON for non-Inertia AJAX requests (API calls)
+        if (($request->wantsJson() || $request->ajax()) && !$request->header('X-Inertia')) {
             $note->load(['tags', 'group']);
             return response()->json($note);
         }
 
-        return redirect()->route('notes.show', $note)
+        // For Inertia and regular requests, return redirect
+        return redirect()->route('notes.index')
             ->with('success', 'Note created successfully.');
     }
 
@@ -255,13 +257,14 @@ class NoteController extends Controller
         // Sync tags
         $note->tags()->sync($validated['tag_ids'] ?? []);
 
-        // Return JSON for AJAX requests
-        if ($request->wantsJson() || $request->ajax()) {
+        // Return JSON for non-Inertia AJAX requests (API calls)
+        if (($request->wantsJson() || $request->ajax()) && !$request->header('X-Inertia')) {
             $note->load(['tags', 'group']);
             return response()->json($note);
         }
 
-        return redirect()->route('notes.show', $note)
+        // For Inertia and regular requests, return redirect
+        return redirect()->route('notes.index')
             ->with('success', 'Note updated successfully.');
     }
 

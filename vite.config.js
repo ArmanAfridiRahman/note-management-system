@@ -24,15 +24,8 @@ export default defineConfig({
         },
     },
     server: {
-        host: '0.0.0.0',
+        host: 'note-management-system.local',
         port: 5173,
-        hmr: {
-            host: 'note-management-system.local',
-            port: 5173,
-        },
         cors: true,
-        watch: {
-            ignored: ['**/.env', '**/.env.*', '**/storage/**'],
-        },
     },
 });
