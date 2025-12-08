@@ -127,7 +127,7 @@ onMounted(() => {
         <!-- Header -->
         <button
             type="button"
-            class="w-full flex items-center justify-between px-3 mb-2"
+            class="w-full flex items-center justify-between px-3 mb-3"
             @click="isExpanded = !isExpanded"
         >
             <h3 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">

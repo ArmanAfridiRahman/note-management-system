@@ -27,6 +27,7 @@ export { default as DropdownItem } from './DropdownItem.vue';
 // Form Components
 export { default as Toggle } from './Toggle.vue';
 export { default as ComboBox } from './ComboBox.vue';
+export { default as DateTimePicker } from './DateTimePicker.vue';
 
 // Layout Components
 export { default as Accordion } from './Accordion.vue';

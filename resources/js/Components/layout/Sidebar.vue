@@ -105,7 +105,7 @@ function isActive(href: string): boolean {
 
             <!-- Sharing -->
             <div class="mt-6">
-                <h3 class="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <h3 class="mb-3 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Sharing
                 </h3>
                 <div class="space-y-1">

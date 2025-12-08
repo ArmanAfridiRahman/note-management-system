@@ -47,6 +47,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Shares API
     Route::get('/shared/with-me', [ShareApiController::class, 'sharedWithMe']);
     Route::get('/shared/by-me', [ShareApiController::class, 'sharedByMe']);
+    Route::get('/shared/with-me/notes', [ShareApiController::class, 'sharedWithMeNotes']);
+    Route::get('/shared/by-me/notes', [ShareApiController::class, 'sharedByMeNotes']);
+    Route::get('/notes/{note}/shares', [ShareApiController::class, 'getNoteShares']);
     Route::post('/shares', [ShareApiController::class, 'store']);
     Route::delete('/shares/{share}', [ShareApiController::class, 'destroy']);
 

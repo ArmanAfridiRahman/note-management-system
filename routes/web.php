@@ -3,6 +3,7 @@
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NoteController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SharedController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -44,13 +45,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('groups.index');
 
     // Sharing
-    Route::get('/shared/with-me', function () {
-        return Inertia::render('Shared/WithMe');
-    })->name('shared.with-me');
-
-    Route::get('/shared/by-me', function () {
-        return Inertia::render('Shared/ByMe');
-    })->name('shared.by-me');
+    Route::get('/shared/with-me', [SharedController::class, 'withMe'])->name('shared.with-me');
+    Route::get('/shared/by-me', [SharedController::class, 'byMe'])->name('shared.by-me');
 
     // Settings
     Route::get('/settings', function () {

@@ -29,6 +29,7 @@
     },
     "dependencies": {
         "@unovis/ts": "^1.6.2",
-        "@unovis/vue": "^1.6.2"
+        "@unovis/vue": "^1.6.2",
+        "@vuepic/vue-datepicker": "^12.1.0"
     }
 }
