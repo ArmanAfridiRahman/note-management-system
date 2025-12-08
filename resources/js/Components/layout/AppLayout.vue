@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
+import axios from 'axios';
 import { Button, ToastContainer } from '@/Components/ui';
 import { ThemeToggle } from '@/Components/shared';
 import Sidebar from './Sidebar.vue';
@@ -10,8 +11,13 @@ import {
     LogOut,
     Settings,
     ChevronDown,
+    Globe,
+    RefreshCw,
 } from 'lucide-vue-next';
 import { Dropdown, DropdownItem } from '@/Components/ui';
+import { useFlashToast } from '@/Composables/useFlashToast';
+import { useUserTheme } from '@/Composables/useUserTheme';
+import { useToast } from '@/Composables/useToast';
 
 interface Props {
     title?: string;
@@ -19,13 +25,44 @@ interface Props {
 
 defineProps<Props>();
 
+interface AuthUser {
+    id: number;
+    name: string;
+    email: string;
+    avatar_url: string;
+}
+
 const page = usePage();
-const user = computed(() => page.props.auth?.user);
+const user = computed(() => page.props.auth?.user as AuthUser | undefined);
+const toast = useToast();
+
+// Initialize flash toast listener
+useFlashToast();
+
+// Apply user's custom theme color
+useUserTheme();
 
 const sidebarOpen = ref(false);
+const clearingCache = ref(false);
 
 function toggleSidebar() {
     sidebarOpen.value = !sidebarOpen.value;
+}
+
+async function clearCache() {
+    if (clearingCache.value) return;
+
+    clearingCache.value = true;
+    try {
+        const { data } = await axios.post('/api/system/clear-cache');
+        if (data.success) {
+            toast.success('Cache cleared successfully');
+        }
+    } catch (err) {
+        toast.error('Failed to clear cache');
+    } finally {
+        clearingCache.value = false;
+    }
 }
 </script>
 
@@ -68,6 +105,27 @@ function toggleSidebar() {
 
                 <!-- Right Section: Actions -->
                 <div class="flex items-center gap-2">
+                    <!-- Visit Frontend -->
+                    <a
+                        href="/welcome"
+                        target="_blank"
+                        class="inline-flex items-center justify-center rounded-md h-10 w-10 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                        title="Visit Landing Page"
+                    >
+                        <Globe class="h-5 w-5" />
+                    </a>
+
+                    <!-- Clear Cache -->
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        :disabled="clearingCache"
+                        title="Clear Cache"
+                        @click="clearCache"
+                    >
+                        <RefreshCw :class="['h-5 w-5', clearingCache && 'animate-spin']" />
+                    </Button>
+
                     <!-- Theme Toggle -->
                     <ThemeToggle />
 
@@ -75,7 +133,13 @@ function toggleSidebar() {
                     <Dropdown align="right">
                         <template #trigger>
                             <Button variant="ghost" class="flex items-center gap-2">
-                                <div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                                <img
+                                    v-if="user?.avatar_url"
+                                    :src="user.avatar_url"
+                                    :alt="user.name"
+                                    class="h-8 w-8 rounded-full object-cover"
+                                />
+                                <div v-else class="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
                                     <User class="h-4 w-4" />
                                 </div>
                                 <span class="hidden md:inline">{{ user?.name }}</span>

@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { Head, usePage } from '@inertiajs/vue3';
+import { Head, usePage, router } from '@inertiajs/vue3';
 import axios from 'axios';
 import { AppLayout } from '@/Components/layout';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button, Toggle, Label, Input } from '@/Components/ui';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button, Toggle, Label, Input, Dialog } from '@/Components/ui';
 import { ThemeToggle } from '@/Components/shared';
 import { useToast } from '@/Composables/useToast';
-import { Settings, Palette, Shield, Download, Trash2 } from 'lucide-vue-next';
+import { Palette, Settings, Trash2, AlertTriangle } from 'lucide-vue-next';
 
 const page = usePage();
 const { success, error } = useToast();
@@ -34,23 +34,22 @@ const savePreferences = async () => {
     }
 };
 
-const exportData = async () => {
-    try {
-        const response = await axios.get('/api/user/export', {
-            responseType: 'blob',
-        });
+// Delete account
+const deleteModal = ref(false);
+const deletePassword = ref('');
+const deleteLoading = ref(false);
 
-        const url = window.URL.createObjectURL(response.data);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'notes-export.json';
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        a.remove();
-    } catch (err) {
-        console.error('Failed to export data:', err);
-        error('Failed to export data');
+const confirmDelete = async () => {
+    deleteLoading.value = true;
+    try {
+        await axios.delete(route('profile.destroy'), {
+            data: { password: deletePassword.value },
+        });
+        router.visit('/');
+    } catch (err: any) {
+        error(err.response?.data?.message || 'Failed to delete account');
+    } finally {
+        deleteLoading.value = false;
     }
 };
 </script>
@@ -59,12 +58,12 @@ const exportData = async () => {
     <Head title="Settings" />
 
     <AppLayout title="Settings">
-        <div class="max-w-3xl space-y-6">
+        <div class="max-w-2xl mx-auto space-y-6">
             <!-- Appearance -->
             <Card variant="outlined">
                 <CardHeader>
                     <div class="flex items-center gap-2">
-                        <Palette class="h-5 w-5" />
+                        <Palette class="h-5 w-5 text-primary" />
                         <CardTitle>Appearance</CardTitle>
                     </div>
                     <CardDescription>
@@ -88,7 +87,7 @@ const exportData = async () => {
             <Card variant="outlined">
                 <CardHeader>
                     <div class="flex items-center gap-2">
-                        <Settings class="h-5 w-5" />
+                        <Settings class="h-5 w-5 text-primary" />
                         <CardTitle>Editor</CardTitle>
                     </div>
                     <CardDescription>
@@ -121,55 +120,74 @@ const exportData = async () => {
                             class="w-20 text-center"
                         />
                     </div>
+
+                    <div class="flex justify-end pt-2">
+                        <Button :disabled="saving" @click="savePreferences">
+                            {{ saving ? 'Saving...' : 'Save Preferences' }}
+                        </Button>
+                    </div>
                 </CardContent>
             </Card>
 
-            <!-- Data -->
-            <Card variant="outlined">
+            <!-- Danger Zone -->
+            <Card variant="outlined" class="border-destructive/50">
                 <CardHeader>
                     <div class="flex items-center gap-2">
-                        <Shield class="h-5 w-5" />
-                        <CardTitle>Data & Privacy</CardTitle>
+                        <Trash2 class="h-5 w-5 text-destructive" />
+                        <CardTitle class="text-destructive">Danger Zone</CardTitle>
                     </div>
                     <CardDescription>
-                        Manage your data and privacy settings.
+                        Irreversible and destructive actions.
                     </CardDescription>
                 </CardHeader>
-                <CardContent class="space-y-4">
+                <CardContent>
                     <div class="flex items-center justify-between">
-                        <div>
-                            <Label>Export Data</Label>
-                            <p class="text-sm text-muted-foreground">
-                                Download all your notes and data.
-                            </p>
-                        </div>
-                        <Button variant="outline" @click="exportData">
-                            <Download class="mr-2 h-4 w-4" />
-                            Export
-                        </Button>
-                    </div>
-
-                    <div class="flex items-center justify-between border-t pt-4">
                         <div>
                             <Label class="text-destructive">Delete Account</Label>
                             <p class="text-sm text-muted-foreground">
                                 Permanently delete your account and all data.
                             </p>
                         </div>
-                        <Button variant="destructive">
+                        <Button variant="destructive" @click="deleteModal = true">
                             <Trash2 class="mr-2 h-4 w-4" />
-                            Delete
+                            Delete Account
                         </Button>
                     </div>
                 </CardContent>
             </Card>
-
-            <!-- Save Button -->
-            <div class="flex justify-end">
-                <Button :disabled="saving" @click="savePreferences">
-                    {{ saving ? 'Saving...' : 'Save Preferences' }}
-                </Button>
-            </div>
         </div>
+
+        <!-- Delete Account Modal -->
+        <Dialog v-model:open="deleteModal" title="Delete Account">
+            <div class="space-y-4">
+                <div class="flex items-start gap-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                    <AlertTriangle class="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+                    <div class="text-sm">
+                        <p class="font-medium text-destructive">This action cannot be undone</p>
+                        <p class="text-muted-foreground mt-1">
+                            This will permanently delete your account and all associated data including notes, tags, and groups.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <Label for="delete-password">Enter your password to confirm</Label>
+                    <Input
+                        id="delete-password"
+                        v-model="deletePassword"
+                        type="password"
+                        placeholder="Your password"
+                    />
+                </div>
+            </div>
+            <template #footer>
+                <Button variant="outline" @click="deleteModal = false" :disabled="deleteLoading">
+                    Cancel
+                </Button>
+                <Button variant="destructive" @click="confirmDelete" :disabled="!deletePassword || deleteLoading">
+                    {{ deleteLoading ? 'Deleting...' : 'Delete My Account' }}
+                </Button>
+            </template>
+        </Dialog>
     </AppLayout>
 </template>

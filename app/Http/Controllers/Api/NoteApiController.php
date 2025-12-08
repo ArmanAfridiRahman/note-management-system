@@ -61,9 +61,14 @@ class NoteApiController extends Controller
                 $query->withTag($request->tag_id);
             }
 
-            // Search
+            // Full search (title + content)
             if ($request->filled('q')) {
                 $query->where('is_encrypted', false)->search($request->q);
+            }
+
+            // Title-only search
+            if ($request->filled('search')) {
+                $query->where('title', 'like', '%' . $request->search . '%');
             }
 
             return $query;
@@ -72,7 +77,7 @@ class NoteApiController extends Controller
         // Get all groups with their notes matching the filters
         $groups = Group::where('user_id', $user->id)
             ->with(['notes' => function ($query) use ($applyFilters) {
-                $applyFilters($query)->with('tags');
+                $applyFilters($query)->with(['tags', 'shares.sharedWithUser']);
             }])
             ->get()
             ->filter(fn ($group) => $group->notes->count() > 0); // Only groups with matching notes
@@ -80,7 +85,7 @@ class NoteApiController extends Controller
         // Build query for truly ungrouped notes only (group_id IS NULL)
         $query = Note::where('user_id', $user->id)
             ->whereNull('group_id')
-            ->with(['tags']);
+            ->with(['tags', 'shares.sharedWithUser']);
 
         // Apply the same filters to ungrouped notes
         $applyFilters($query);
@@ -138,7 +143,7 @@ class NoteApiController extends Controller
     {
         $this->authorize('view', $note);
 
-        $note->load(['tags', 'group']);
+        $note->load(['tags', 'group', 'shares.sharedWithUser']);
         $note->recordView();
 
         return response()->json([
@@ -160,7 +165,7 @@ class NoteApiController extends Controller
 
         $query = Note::where('user_id', $user->id)
             ->where('is_encrypted', false)
-            ->with(['tags', 'group']);
+            ->with(['tags', 'group', 'shares.sharedWithUser']);
 
         if (!$request->boolean('include_archived')) {
             $query->active();

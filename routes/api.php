@@ -47,10 +47,21 @@ Route::middleware('auth:sanctum')->group(function () {
     // Shares API
     Route::get('/shared/with-me', [ShareApiController::class, 'sharedWithMe']);
     Route::get('/shared/by-me', [ShareApiController::class, 'sharedByMe']);
+    Route::get('/shared/with-me/notes', [ShareApiController::class, 'sharedWithMeNotes']);
+    Route::get('/shared/by-me/notes', [ShareApiController::class, 'sharedByMeNotes']);
+    Route::get('/notes/{note}/shares', [ShareApiController::class, 'getNoteShares']);
     Route::post('/shares', [ShareApiController::class, 'store']);
     Route::delete('/shares/{share}', [ShareApiController::class, 'destroy']);
 
     // User Preferences API
     Route::get('/user/preferences', [UserApiController::class, 'preferences']);
     Route::put('/user/preferences', [UserApiController::class, 'updatePreferences']);
+
+    // User Profile API
+    Route::post('/user/avatar', [UserApiController::class, 'uploadAvatar']);
+    Route::delete('/user/avatar', [UserApiController::class, 'deleteAvatar']);
+    Route::put('/user/colors', [UserApiController::class, 'updateColors']);
+
+    // System API
+    Route::post('/system/clear-cache', [UserApiController::class, 'clearCache']);
 });

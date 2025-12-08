@@ -116,16 +116,21 @@ class NoteController extends Controller
         ]);
     }
 
-    public function create(Request $request): Response
+    public function pinned(Request $request): Response
     {
         $user = $request->user();
 
         $tags = Tag::where('user_id', $user->id)->ordered()->get();
-        $groups = Group::where('user_id', $user->id)->root()->with('children')->ordered()->get();
+        $groups = Group::where('user_id', $user->id)->root()->ordered()->get();
+        $users = User::where('id', '!=', $user->id)
+            ->select('id', 'name', 'email')
+            ->orderBy('name')
+            ->get();
 
-        return Inertia::render('Notes/Create', [
+        return Inertia::render('Notes/Pinned', [
             'tags' => $tags,
             'groups' => $groups,
+            'users' => $users,
         ]);
     }
 
@@ -220,37 +225,6 @@ class NoteController extends Controller
         // For Inertia and regular requests, return redirect
         return redirect()->route('notes.index')
             ->with('success', 'Note created successfully.');
-    }
-
-    public function show(Request $request, Note $note): Response
-    {
-        $this->authorize('view', $note);
-
-        $note->load(['tags', 'group', 'encryptedContent', 'shares.sharedWithUser']);
-        $note->recordView();
-
-        return Inertia::render('Notes/Show', [
-            'note' => $note,
-            'isEncrypted' => $note->is_encrypted,
-            'uniqueCode' => $note->encryptedContent?->unique_code,
-        ]);
-    }
-
-    public function edit(Request $request, Note $note): Response
-    {
-        $this->authorize('update', $note);
-
-        $user = $request->user();
-        $note->load(['tags', 'group']);
-
-        $tags = Tag::where('user_id', $user->id)->ordered()->get();
-        $groups = Group::where('user_id', $user->id)->root()->with('children')->ordered()->get();
-
-        return Inertia::render('Notes/Edit', [
-            'note' => $note,
-            'tags' => $tags,
-            'groups' => $groups,
-        ]);
     }
 
     public function update(Request $request, Note $note): RedirectResponse|\Illuminate\Http\JsonResponse

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, inject } from 'vue';
+import { computed, ref } from 'vue';
 import { Button, Dropdown, DropdownItem } from '@/Components/ui';
+import { UserAvatar } from '@/Components/shared';
 import { formatRelativeTime, cn } from '@/lib/utils';
 import {
     Pin,
@@ -52,6 +53,21 @@ const isHoveredForDrop = ref(false);
 const justDropped = ref(false);
 
 const formattedDate = computed(() => formatRelativeTime(props.note.updated_at));
+
+// Shared users display
+const sharedUsers = computed(() => {
+    if (!props.note.shares || props.note.shares.length === 0) return [];
+    return props.note.shares
+        .filter(share => share.shared_with_user)
+        .map(share => share.shared_with_user!)
+        .slice(0, 5);
+});
+
+const additionalSharesCount = computed(() => {
+    if (!props.note.shares) return 0;
+    const validShares = props.note.shares.filter(share => share.shared_with_user);
+    return Math.max(0, validShares.length - 5);
+});
 
 // Check if the currently dragging note is different from this one
 const showDropPreview = computed(() => {
@@ -207,8 +223,7 @@ const handleClick = () => {
                     <Lock class="w-6 h-6 text-blue-600 dark:text-blue-400" />
                 </div>
                 <h3 class="font-semibold text-sm text-foreground mb-1">{{ note.title }}</h3>
-                <p class="text-xs text-muted-foreground">Encrypted note</p>
-                <p class="text-[10px] text-muted-foreground mt-2">Click to unlock</p>
+                <p class="text-[10px] text-muted-foreground mt-1">Click to unlock</p>
             </div>
 
             <!-- Status icons in corner -->
@@ -276,6 +291,21 @@ const handleClick = () => {
             <!-- Footer -->
             <div class="absolute bottom-3 left-4 right-4 flex items-center justify-between text-[10px] text-muted-foreground pt-2 border-t border-border/30">
                 <span>{{ formattedDate }}</span>
+                <!-- Shared Users -->
+                <div v-if="sharedUsers.length > 0" class="flex items-center -space-x-1.5">
+                    <UserAvatar
+                        v-for="user in sharedUsers"
+                        :key="user.id"
+                        :user="user"
+                        size="xs"
+                    />
+                    <div
+                        v-if="additionalSharesCount > 0"
+                        class="w-5 h-5 rounded-full border-2 border-background bg-muted flex items-center justify-center text-[8px] font-medium text-muted-foreground"
+                    >
+                        +{{ additionalSharesCount }}
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -384,6 +414,21 @@ const handleClick = () => {
             <!-- Footer -->
             <div class="flex items-center justify-between mt-2 pt-2 border-t border-border/30 text-[10px] text-muted-foreground">
                 <span>{{ formattedDate }}</span>
+                <!-- Shared Users -->
+                <div v-if="sharedUsers.length > 0" class="flex items-center -space-x-1.5">
+                    <UserAvatar
+                        v-for="user in sharedUsers"
+                        :key="user.id"
+                        :user="user"
+                        size="xs"
+                    />
+                    <div
+                        v-if="additionalSharesCount > 0"
+                        class="w-5 h-5 rounded-full border-2 border-background bg-muted flex items-center justify-center text-[8px] font-medium text-muted-foreground"
+                    >
+                        +{{ additionalSharesCount }}
+                    </div>
+                </div>
             </div>
         </div>
 

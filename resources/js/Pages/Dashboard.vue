@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import { Head, usePage } from '@inertiajs/vue3';
 import { AppLayout } from '@/Components/layout';
 import { Card, Accordion } from '@/Components/ui';
 import { NotesSection } from '@/Components/notes';
@@ -36,6 +37,32 @@ interface Props {
 }
 
 defineProps<Props>();
+const page = usePage();
+
+// Create filters that include tags from URL
+const pinnedFilters = computed(() => {
+    const searchParams = new URLSearchParams(page.url.split('?')[1] || '');
+    const tagsParam = searchParams.get('tags');
+    const filters: Record<string, string> = { filter: 'pinned' };
+    if (tagsParam) filters.tags = tagsParam;
+    return filters;
+});
+
+const favoritesFilters = computed(() => {
+    const searchParams = new URLSearchParams(page.url.split('?')[1] || '');
+    const tagsParam = searchParams.get('tags');
+    const filters: Record<string, string> = { filter: 'favorites' };
+    if (tagsParam) filters.tags = tagsParam;
+    return filters;
+});
+
+const regularFilters = computed(() => {
+    const searchParams = new URLSearchParams(page.url.split('?')[1] || '');
+    const tagsParam = searchParams.get('tags');
+    const filters: Record<string, string> = { filter: 'regular' };
+    if (tagsParam) filters.tags = tagsParam;
+    return filters;
+});
 </script>
 
 <template>
@@ -73,12 +100,14 @@ defineProps<Props>();
                 :count="noteStates.pinned"
             >
                 <NotesSection
+                    :key="'pinned-' + page.url"
                     fetch-url="/api/notes"
-                    :filters="{ filter: 'pinned' }"
+                    :filters="pinnedFilters"
                     :tags="tags"
                     :groups="groups"
                     :users="users"
                     :show-quick-input="false"
+                    :show-search="false"
                     :draggable="false"
                     empty-title="No pinned notes"
                     empty-description="Pin important notes to access them quickly."
@@ -92,12 +121,14 @@ defineProps<Props>();
                 :count="noteStates.favorites"
             >
                 <NotesSection
+                    :key="'favorites-' + page.url"
                     fetch-url="/api/notes"
-                    :filters="{ filter: 'favorites' }"
+                    :filters="favoritesFilters"
                     :tags="tags"
                     :groups="groups"
                     :users="users"
                     :show-quick-input="false"
+                    :show-search="false"
                     :draggable="false"
                     empty-title="No favorite notes"
                     empty-description="Mark notes as favorites to find them here."
@@ -111,12 +142,14 @@ defineProps<Props>();
                 :count="noteStates.regular"
             >
                 <NotesSection
+                    :key="'regular-' + page.url"
                     fetch-url="/api/notes"
-                    :filters="{ filter: 'regular' }"
+                    :filters="regularFilters"
                     :tags="tags"
                     :groups="groups"
                     :users="users"
                     :show-quick-input="false"
+                    :show-search="false"
                     :draggable="false"
                     empty-title="No regular notes"
                     empty-description="Create your first note to get started."

@@ -3,10 +3,11 @@ import { ref, computed, watch, nextTick } from 'vue';
 import { router } from '@inertiajs/vue3';
 import axios from 'axios';
 import { Dialog, Button, Input, Textarea, Label, Badge, Toggle, ComboBox } from '@/Components/ui';
+import { UserAvatar } from '@/Components/shared';
 import { cn } from '@/lib/utils';
 import { useAutoSave } from '@/Composables/useAutoSave';
 import { appConfig } from '@/config/app';
-import type { NoteData, TagData, GroupData } from '@/types/models';
+import type { NoteData, TagData, GroupData, UserData } from '@/types/models';
 import {
     X,
     Save,
@@ -202,7 +203,25 @@ const groupOptions = computed(() => [
 
 const isEditing = computed(() => currentMode.value === 'edit' || currentMode.value === 'create');
 const isNewNote = computed(() => currentMode.value === 'create' && !currentNoteId.value);
-const canSave = computed(() => contentForm.value.title.trim().length > 0);
+
+// Validation for save button
+const canSave = computed(() => {
+    // Title is required
+    if (contentForm.value.title.trim().length === 0) {
+        return false;
+    }
+
+    // If encryption is enabled and this is a new note or converting to encrypted,
+    // encryption password is required (min 4 characters)
+    const isEnablingEncryption = encryptionForm.value.is_encrypted &&
+        (isNewNote.value || !props.note?.is_encrypted);
+
+    if (isEnablingEncryption && encryptionForm.value.encryption_password.length < 4) {
+        return false;
+    }
+
+    return true;
+});
 
 // Convert hex to RGB for light background
 const hexToRgb = (hex: string) => {
@@ -235,6 +254,21 @@ const saveStatusText = computed(() => {
     }
     if (isDirty.value) return 'Unsaved changes';
     return '';
+});
+
+// Shared users display
+const sharedUsers = computed(() => {
+    if (!props.note?.shares || props.note.shares.length === 0) return [];
+    return props.note.shares
+        .filter(share => share.shared_with_user)
+        .map(share => share.shared_with_user!)
+        .slice(0, 5);
+});
+
+const additionalSharesCount = computed(() => {
+    if (!props.note?.shares) return 0;
+    const validShares = props.note.shares.filter(share => share.shared_with_user);
+    return Math.max(0, validShares.length - 5);
 });
 
 watch(
@@ -614,9 +648,29 @@ function handleShare() {
                             </div>
                         </div>
                     </div>
-                    <Button variant="ghost" size="icon" @click="handleClose">
-                        <X class="w-5 h-5" />
-                    </Button>
+                    <div class="flex items-center gap-3">
+                        <!-- Shared Users -->
+                        <div v-if="sharedUsers.length > 0" class="flex items-center gap-2">
+                            <span class="text-xs text-muted-foreground hidden sm:inline">Shared with</span>
+                            <div class="flex items-center -space-x-2">
+                                <UserAvatar
+                                    v-for="user in sharedUsers"
+                                    :key="user.id"
+                                    :user="user"
+                                    size="sm"
+                                />
+                                <div
+                                    v-if="additionalSharesCount > 0"
+                                    class="w-7 h-7 rounded-full border-2 border-background bg-muted flex items-center justify-center text-xs font-medium text-muted-foreground"
+                                >
+                                    +{{ additionalSharesCount }}
+                                </div>
+                            </div>
+                        </div>
+                        <Button variant="ghost" size="icon" @click="handleClose">
+                            <X class="w-5 h-5" />
+                        </Button>
+                    </div>
                 </div>
 
                 <!-- Content Area -->
@@ -774,17 +828,30 @@ function handleShare() {
 
                                 <!-- Encryption Fields -->
                                 <div v-if="encryptionForm.is_encrypted" class="space-y-3 pl-6">
-                                    <Input
-                                        v-model="encryptionForm.encryption_password"
-                                        type="password"
-                                        placeholder="Encryption code"
-                                        :error="errors.encryption_password"
-                                    />
-                                    <Input
-                                        v-model="encryptionForm.encryption_hint"
-                                        placeholder="Hint (optional) - helps you remember the code"
-                                        :error="errors.encryption_hint"
-                                    />
+                                    <div class="space-y-1.5">
+                                        <Label class="text-sm">
+                                            Encryption Code
+                                            <span class="text-destructive">*</span>
+                                        </Label>
+                                        <Input
+                                            v-model="encryptionForm.encryption_password"
+                                            type="password"
+                                            placeholder="Enter a secure code (min 4 characters)"
+                                            :error="errors.encryption_password || (encryptionForm.encryption_password.length > 0 && encryptionForm.encryption_password.length < 4 ? 'Code must be at least 4 characters' : '')"
+                                            required
+                                        />
+                                        <p v-if="encryptionForm.encryption_password.length === 0" class="text-xs text-muted-foreground">
+                                            Required to encrypt your note
+                                        </p>
+                                    </div>
+                                    <div class="space-y-1.5">
+                                        <Label class="text-sm text-muted-foreground">Hint (optional)</Label>
+                                        <Input
+                                            v-model="encryptionForm.encryption_hint"
+                                            placeholder="Helps you remember the code"
+                                            :error="errors.encryption_hint"
+                                        />
+                                    </div>
                                 </div>
                             </div>
 

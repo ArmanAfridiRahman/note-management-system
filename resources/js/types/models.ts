@@ -22,6 +22,21 @@ export interface UserData {
     id: number;
     name: string;
     email: string;
+    avatar?: string;
+    avatar_url: string;
+    color?: string;
+    display_color: string;
+    initials: string;
+}
+
+export interface NoteShareData {
+    id: number;
+    note_id: number;
+    shared_by_user_id: number;
+    shared_with_user_id: number;
+    permission: 'view' | 'edit';
+    shared_with_user?: UserData;
+    created_at: string;
 }
 
 export interface ParentSnapshot {
@@ -56,6 +71,7 @@ export interface NoteData {
     meta_data?: NoteMetaData;
     tags: TagData[];
     tag_ids?: number[];
+    shares?: NoteShareData[];
     encryption_hint?: string;
     archived_at?: string;
     created_at: string;
