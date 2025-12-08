@@ -12,6 +12,7 @@ import {
     ChevronDown,
 } from 'lucide-vue-next';
 import { Dropdown, DropdownItem } from '@/Components/ui';
+import { useFlashToast } from '@/Composables/useFlashToast';
 
 interface Props {
     title?: string;
@@ -21,6 +22,9 @@ defineProps<Props>();
 
 const page = usePage();
 const user = computed(() => page.props.auth?.user);
+
+// Initialize flash toast listener
+useFlashToast();
 
 const sidebarOpen = ref(false);
 

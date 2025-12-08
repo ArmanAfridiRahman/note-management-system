@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
+import axios from 'axios';
 import { cn } from '@/lib/utils';
+import { Toggle, Dropdown, DropdownItem } from '@/Components/ui';
+import { useToast } from '@/Composables/useToast';
 import {
     FileText,
     Home,
@@ -9,7 +12,13 @@ import {
     Share2,
     Star,
     Lock,
+    Pin,
     X,
+    MoreVertical,
+    User,
+    Settings,
+    LogOut,
+    Save,
 } from 'lucide-vue-next';
 import TagsSidebar from './TagsSidebar.vue';
 
@@ -24,7 +33,40 @@ const emit = defineEmits<{
 }>();
 
 const page = usePage();
+const toast = useToast();
 const currentRoute = computed(() => page.url);
+const user = computed(() => page.props.auth?.user as { name: string; email: string } | null);
+
+// Auto-save preference
+const autoSave = ref(true);
+const autoSaveLoading = ref(false);
+
+onMounted(async () => {
+    try {
+        const { data } = await axios.get('/api/user/preferences');
+        if (data.success && data.data) {
+            autoSave.value = data.data.auto_save ?? true;
+        }
+    } catch (err) {
+        console.error('Failed to load preferences:', err);
+    }
+});
+
+const toggleAutoSave = async () => {
+    autoSaveLoading.value = true;
+    try {
+        const newValue = !autoSave.value;
+        const { data } = await axios.put('/api/user/preferences', { auto_save: newValue });
+        if (data.success) {
+            autoSave.value = newValue;
+            toast.success(newValue ? 'Auto-save enabled' : 'Auto-save disabled');
+        }
+    } catch (err) {
+        toast.error('Failed to update preference');
+    } finally {
+        autoSaveLoading.value = false;
+    }
+};
 
 interface NavItem {
     name: string;
@@ -36,6 +78,7 @@ interface NavItem {
 const mainNavItems: NavItem[] = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'All Notes', href: '/notes', icon: FileText },
+    { name: 'Pinned', href: '/notes/pinned', icon: Pin },
     { name: 'Favorites', href: '/notes/favorites', icon: Star },
     { name: 'Encrypted', href: '/notes/encrypted', icon: Lock },
     { name: 'Archived', href: '/notes/archived', icon: Archive },
@@ -49,6 +92,15 @@ const sharingItems: NavItem[] = [
 function isActive(href: string): boolean {
     const currentPath = currentRoute.value.split('?')[0];
     return currentPath === href;
+}
+
+function getUserInitials(name: string): string {
+    return name
+        .split(' ')
+        .map(n => n.charAt(0))
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
 }
 </script>
 
@@ -131,11 +183,51 @@ function isActive(href: string): boolean {
             <TagsSidebar />
         </nav>
 
-        <!-- Footer -->
-        <div class="border-t border-border p-4">
-            <p class="text-xs text-muted-foreground text-center">
-                Note Management System
-            </p>
+        <!-- Profile Card -->
+        <div class="border-t border-border p-3">
+            <!-- Auto-save Toggle -->
+            <div class="flex items-center justify-between px-2 py-2 mb-2 rounded-md hover:bg-muted/50 transition-colors">
+                <div class="flex items-center gap-2 text-sm">
+                    <Save class="h-4 w-4 text-muted-foreground" />
+                    <span class="text-muted-foreground">Auto-save</span>
+                </div>
+                <Toggle
+                    :model-value="autoSave"
+                    @update:model-value="toggleAutoSave"
+                    :disabled="autoSaveLoading"
+                    size="sm"
+                />
+            </div>
+
+            <!-- User Profile -->
+            <div v-if="user" class="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                <div class="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-medium">
+                    {{ getUserInitials(user.name) }}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-foreground truncate">{{ user.name }}</p>
+                    <p class="text-xs text-muted-foreground truncate">{{ user.email }}</p>
+                </div>
+                <Dropdown align="top-right">
+                    <template #trigger>
+                        <button class="p-1.5 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                            <MoreVertical class="h-4 w-4" />
+                        </button>
+                    </template>
+                    <DropdownItem as="link" href="/profile">
+                        <User class="h-4 w-4" />
+                        Profile
+                    </DropdownItem>
+                    <DropdownItem as="link" href="/settings">
+                        <Settings class="h-4 w-4" />
+                        Settings
+                    </DropdownItem>
+                    <DropdownItem as="link" href="/logout" method="post" destructive>
+                        <LogOut class="h-4 w-4" />
+                        Log out
+                    </DropdownItem>
+                </Dropdown>
+            </div>
         </div>
     </aside>
 </template>

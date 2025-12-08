@@ -64,6 +64,7 @@ class User extends Authenticatable
             'default_group_id' => null,
             'show_archived' => false,
             'compact_view' => false,
+            'auto_save' => true,
         ];
     }
 

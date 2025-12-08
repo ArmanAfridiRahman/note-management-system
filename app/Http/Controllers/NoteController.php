@@ -116,6 +116,24 @@ class NoteController extends Controller
         ]);
     }
 
+    public function pinned(Request $request): Response
+    {
+        $user = $request->user();
+
+        $tags = Tag::where('user_id', $user->id)->ordered()->get();
+        $groups = Group::where('user_id', $user->id)->root()->ordered()->get();
+        $users = User::where('id', '!=', $user->id)
+            ->select('id', 'name', 'email')
+            ->orderBy('name')
+            ->get();
+
+        return Inertia::render('Notes/Pinned', [
+            'tags' => $tags,
+            'groups' => $groups,
+            'users' => $users,
+        ]);
+    }
+
     public function create(Request $request): Response
     {
         $user = $request->user();

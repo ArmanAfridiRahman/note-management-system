@@ -207,8 +207,7 @@ const handleClick = () => {
                     <Lock class="w-6 h-6 text-blue-600 dark:text-blue-400" />
                 </div>
                 <h3 class="font-semibold text-sm text-foreground mb-1">{{ note.title }}</h3>
-                <p class="text-xs text-muted-foreground">Encrypted note</p>
-                <p class="text-[10px] text-muted-foreground mt-2">Click to unlock</p>
+                <p class="text-[10px] text-muted-foreground mt-1">Click to unlock</p>
             </div>
 
             <!-- Status icons in corner -->

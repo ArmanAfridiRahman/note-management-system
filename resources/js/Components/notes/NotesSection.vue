@@ -5,7 +5,10 @@ import axios from 'axios';
 import { Button, Dialog, ComboBox, Input, Label, Textarea, Select, DateTimePicker } from '@/Components/ui';
 import { NoteGrid, NoteModal, QuickNoteInput, GroupModal } from '@/Components/notes';
 import { Users, LayoutGrid, Lock, Loader2, AlertCircle, HelpCircle, ChevronDown, ChevronUp, FolderInput, X, Eye, Pencil, Clock } from 'lucide-vue-next';
+import { useToast } from '@/Composables/useToast';
 import type { NoteData, TagData, GroupData, UserData, NoteFormData } from '@/types/models';
+
+const toast = useToast();
 
 interface ExistingShare {
     id: number;
@@ -239,9 +242,11 @@ const confirmShare = async () => {
             shareMessage.value = '';
             existingShares.value = [];
             noteGridRef.value?.refresh();
+            toast.success(response.data.message || 'Note shared successfully.');
         }
     } catch (error: any) {
         shareError.value = error.response?.data?.message || 'Failed to share note. Please try again.';
+        toast.error(shareError.value);
     } finally {
         shareLoading.value = false;
     }
@@ -252,7 +257,7 @@ const revokeShare = async (shareId: number) => {
     try {
         // Find the share before removing it
         const share = existingShares.value.find((s) => s.id === shareId);
-        await axios.delete(`/api/shares/${shareId}`);
+        const response = await axios.delete(`/api/shares/${shareId}`);
         // Remove from existing shares
         existingShares.value = existingShares.value.filter((s) => s.id !== shareId);
         // Also remove from selected user ids
@@ -260,8 +265,10 @@ const revokeShare = async (shareId: number) => {
             shareUserIds.value = shareUserIds.value.filter((id) => id !== share.user.id);
         }
         noteGridRef.value?.refresh();
+        toast.success(response.data?.message || 'Share revoked successfully.');
     } catch (error: any) {
         shareError.value = error.response?.data?.message || 'Failed to revoke share.';
+        toast.error(shareError.value);
     } finally {
         revokeLoading.value = null;
     }
@@ -386,6 +393,7 @@ const confirmUnlock = async () => {
             selectedNote.value = decryptedNote;
             noteModalMode.value = 'edit';
             noteModalOpen.value = true;
+            toast.success('Note unlocked successfully.');
         }
     } catch (error: any) {
         if (error.response?.status === 429) {
@@ -395,6 +403,7 @@ const confirmUnlock = async () => {
         } else {
             unlockError.value = 'Failed to decrypt note. Please check your code.';
         }
+        toast.error(unlockError.value);
     } finally {
         unlockLoading.value = false;
     }
@@ -421,7 +430,7 @@ const confirmMerge = async () => {
 
     mergeLoading.value = true;
     try {
-        await axios.post('/api/groups/merge', {
+        const response = await axios.post('/api/groups/merge', {
             source_group_id: mergeSourceGroup.value.id,
             target_group_id: mergeTargetGroup.value.id,
         });
@@ -429,8 +438,10 @@ const confirmMerge = async () => {
         mergeSourceGroup.value = null;
         mergeTargetGroup.value = null;
         noteGridRef.value?.refresh();
+        toast.success(response.data?.message || 'Groups merged successfully.');
     } catch (error: any) {
-        console.error('Failed to merge groups:', error);
+        const errorMessage = error.response?.data?.message || 'Failed to merge groups.';
+        toast.error(errorMessage);
     } finally {
         mergeLoading.value = false;
     }

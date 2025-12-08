@@ -774,17 +774,27 @@ function handleShare() {
 
                                 <!-- Encryption Fields -->
                                 <div v-if="encryptionForm.is_encrypted" class="space-y-3 pl-6">
-                                    <Input
-                                        v-model="encryptionForm.encryption_password"
-                                        type="password"
-                                        placeholder="Encryption code"
-                                        :error="errors.encryption_password"
-                                    />
-                                    <Input
-                                        v-model="encryptionForm.encryption_hint"
-                                        placeholder="Hint (optional) - helps you remember the code"
-                                        :error="errors.encryption_hint"
-                                    />
+                                    <div class="space-y-1.5">
+                                        <Label class="text-sm">
+                                            Encryption Code
+                                            <span class="text-destructive">*</span>
+                                        </Label>
+                                        <Input
+                                            v-model="encryptionForm.encryption_password"
+                                            type="password"
+                                            placeholder="Enter a secure code (min 4 characters)"
+                                            :error="errors.encryption_password"
+                                            required
+                                        />
+                                    </div>
+                                    <div class="space-y-1.5">
+                                        <Label class="text-sm text-muted-foreground">Hint (optional)</Label>
+                                        <Input
+                                            v-model="encryptionForm.encryption_hint"
+                                            placeholder="Helps you remember the code"
+                                            :error="errors.encryption_hint"
+                                        />
+                                    </div>
                                 </div>
                             </div>
 
