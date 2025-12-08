@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Hash;
 
 class EncryptedNote extends Model
 {
@@ -13,7 +13,7 @@ class EncryptedNote extends Model
 
     protected $fillable = [
         'note_id',
-        'unique_code',
+        'encryption_code_hash',
         'encrypted_content',
         'encryption_iv',
         'hint',
@@ -30,29 +30,11 @@ class EncryptedNote extends Model
     }
 
     /**
-     * Boot the model.
+     * Hash an encryption code using bcrypt.
      */
-    protected static function boot(): void
+    public static function hashCode(string $code): string
     {
-        parent::boot();
-
-        static::creating(function (EncryptedNote $encryptedNote) {
-            if (empty($encryptedNote->unique_code)) {
-                $encryptedNote->unique_code = static::generateUniqueCode();
-            }
-        });
-    }
-
-    /**
-     * Generate a unique code for the encrypted note.
-     */
-    public static function generateUniqueCode(int $length = 8): string
-    {
-        do {
-            $code = strtoupper(Str::random($length));
-        } while (static::where('unique_code', $code)->exists());
-
-        return $code;
+        return Hash::make($code);
     }
 
     /**
@@ -120,39 +102,77 @@ class EncryptedNote extends Model
     }
 
     /**
-     * Encrypt content using AES-256-CBC.
+     * Encrypt content and excerpt using AES-256-CBC.
+     * Returns encrypted data to be stored in the notes table.
      */
-    public static function encryptContent(string $content, string $password): array
+    public static function encryptNoteData(string $content, ?string $excerpt, string $password): array
     {
         $algorithm = config('theme.notes.encryption_algorithm', 'AES-256-CBC');
         $key = hash('sha256', $password, true);
         $iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length($algorithm));
 
-        $encrypted = openssl_encrypt($content, $algorithm, $key, 0, $iv);
+        $encryptedContent = openssl_encrypt($content, $algorithm, $key, 0, $iv);
+        $encryptedExcerpt = $excerpt ? openssl_encrypt($excerpt, $algorithm, $key, 0, $iv) : null;
 
         return [
-            'encrypted_content' => base64_encode($encrypted),
+            'encrypted_content' => base64_encode($encryptedContent),
+            'encrypted_excerpt' => $encryptedExcerpt ? base64_encode($encryptedExcerpt) : null,
             'encryption_iv' => base64_encode($iv),
         ];
     }
 
     /**
-     * Decrypt content using AES-256-CBC.
+     * Encrypt content using AES-256-CBC (legacy support).
      */
-    public function decryptContent(string $password): ?string
+    public static function encryptContent(string $content, string $password): array
+    {
+        $result = static::encryptNoteData($content, null, $password);
+        return [
+            'encrypted_content' => $result['encrypted_content'],
+            'encryption_iv' => $result['encryption_iv'],
+        ];
+    }
+
+    /**
+     * Decrypt a string using AES-256-CBC with stored IV.
+     */
+    public static function decryptString(string $encryptedData, string $password, string $iv): ?string
+    {
+        $algorithm = config('theme.notes.encryption_algorithm', 'AES-256-CBC');
+        $key = hash('sha256', $password, true);
+        $ivDecoded = base64_decode($iv);
+        $encrypted = base64_decode($encryptedData);
+
+        $decrypted = openssl_decrypt($encrypted, $algorithm, $key, 0, $ivDecoded);
+
+        return $decrypted !== false ? $decrypted : null;
+    }
+
+    /**
+     * Decrypt content using AES-256-CBC with code verification.
+     */
+    public function decryptContent(string $code): ?string
     {
         if ($this->isLocked()) {
             return null;
         }
 
-        $algorithm = config('theme.notes.encryption_algorithm', 'AES-256-CBC');
-        $key = hash('sha256', $password, true);
-        $iv = base64_decode($this->encryption_iv);
-        $encrypted = base64_decode($this->encrypted_content);
+        // First verify the code against the hash
+        if (!$this->verifyCode($code)) {
+            $this->recordFailedAttempt();
+            return null;
+        }
 
-        $decrypted = openssl_decrypt($encrypted, $algorithm, $key, 0, $iv);
+        // Get the note's encrypted content from the parent note
+        $note = $this->note;
+        if (!$note || !$note->content) {
+            return null;
+        }
 
-        if ($decrypted === false) {
+        // Decrypt the content stored in notes.content
+        $decrypted = static::decryptString($note->content, $code, $this->encryption_iv);
+
+        if ($decrypted === null) {
             $this->recordFailedAttempt();
             return null;
         }
@@ -162,10 +182,23 @@ class EncryptedNote extends Model
     }
 
     /**
-     * Verify if a code matches.
+     * Decrypt the note's excerpt.
+     */
+    public function decryptExcerpt(string $code): ?string
+    {
+        $note = $this->note;
+        if (!$note || !$note->excerpt) {
+            return null;
+        }
+
+        return static::decryptString($note->excerpt, $code, $this->encryption_iv);
+    }
+
+    /**
+     * Verify if a code matches the hashed code.
      */
     public function verifyCode(string $code): bool
     {
-        return strtoupper($code) === strtoupper($this->unique_code);
+        return Hash::check($code, $this->encryption_code_hash);
     }
 }

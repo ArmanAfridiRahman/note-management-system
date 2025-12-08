@@ -8,7 +8,7 @@ const badgeVariants = cva(
     {
         variants: {
             variant: {
-                default: 'border-transparent bg-primary text-primary-foreground',
+                default: 'border-primary/50 bg-primary/10 text-primary',
                 secondary: 'border-transparent bg-secondary text-secondary-foreground',
                 destructive: 'border-transparent bg-destructive text-destructive-foreground',
                 outline: 'text-foreground',
@@ -52,14 +52,8 @@ const classes = computed(() =>
     cn(badgeVariants({ variant: props.variant, size: props.size }), props.class)
 );
 
+// Color prop is ignored - we use primary color for all tag badges
 const customStyle = computed(() => {
-    if (props.color) {
-        return {
-            backgroundColor: `${props.color}20`,
-            color: props.color,
-            borderColor: `${props.color}40`,
-        };
-    }
     return {};
 });
 </script>

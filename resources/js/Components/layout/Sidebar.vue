@@ -11,6 +11,7 @@ import {
     Lock,
     X,
 } from 'lucide-vue-next';
+import TagsSidebar from './TagsSidebar.vue';
 
 interface Props {
     open: boolean;
@@ -125,6 +126,9 @@ function isActive(href: string): boolean {
                     </Link>
                 </div>
             </div>
+
+            <!-- Tags Filter -->
+            <TagsSidebar />
         </nav>
 
         <!-- Footer -->

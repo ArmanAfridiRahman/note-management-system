@@ -156,30 +156,51 @@ class NoteController extends Controller
         ]);
 
         $user = $request->user();
-        
-        // Create the note
+
+        // Prepare content and excerpt
+        $content = Arr::get($validated, 'content');
+        $excerpt = null;
+
+        // Generate excerpt from plain content first (before encryption)
+        if (!empty($content)) {
+            $excerpt = Note::generateExcerpt($content);
+        }
+
+        // Handle encryption - encrypt content and excerpt before storing
+        $isEncrypted = $validated['is_encrypted'] ?? false;
+        if ($isEncrypted && !empty($content)) {
+            // Encrypt the content and excerpt
+            $encryptedData = EncryptedNote::encryptNoteData(
+                $content,
+                $excerpt,
+                $validated['encryption_password']
+            );
+
+            // Store encrypted versions in the note
+            $content = $encryptedData['encrypted_content'];
+            $excerpt = $encryptedData['encrypted_excerpt'];
+        }
+
+        // Create the note with encrypted or plain content
         $note = Note::create([
             'user_id' => $user->id,
             'title' => $validated['title'],
-            'content' => Arr::get($validated, 'content'),
+            'content' => $content,
+            'excerpt' => $excerpt,
             'group_id' => $validated['group_id'] ?? null,
-            'is_encrypted' => $validated['is_encrypted'] ?? false,
+            'is_encrypted' => $isEncrypted,
             'color' => $validated['color'] ?? null,
             'is_pinned' => $validated['is_pinned'] ?? false,
             'is_favorited' => $validated['is_favorited'] ?? false,
             'is_archived' => $validated['is_archived'] ?? false,
         ]);
 
-        // Handle encryption
-        if (Arr::get($validated, 'is_encrypted') && !empty($validated['content'])) {
-            $encryptedData = EncryptedNote::encryptContent(
-                $validated['content'],
-                $validated['encryption_password']
-            );
-
+        // Create encrypted note record with hashed code and IV
+        if ($isEncrypted && !empty($validated['content'])) {
             EncryptedNote::create([
                 'note_id' => $note->id,
-                'encrypted_content' => $encryptedData['encrypted_content'],
+                'encryption_code_hash' => EncryptedNote::hashCode($validated['encryption_password']),
+                'encrypted_content' => '', // Content stored in notes table now
                 'encryption_iv' => $encryptedData['encryption_iv'],
                 'hint' => $validated['encryption_hint'] ?? null,
             ]);
@@ -244,15 +265,63 @@ class NoteController extends Controller
             'tag_ids.*' => 'exists:tags,id',
             'color' => 'nullable|string|max:7',
             'is_pinned' => 'boolean',
+            'is_encrypted' => 'boolean',
+            'encryption_password' => [
+                'nullable',
+                'string',
+                'min:4',
+                function ($attribute, $value, $fail) use ($request, $note) {
+                    // Only require password if enabling encryption on a non-encrypted note
+                    if ($request->boolean('is_encrypted') && !$note->is_encrypted && empty($value)) {
+                        $fail('The encryption password is required when enabling encryption.');
+                    }
+                },
+            ],
+            'encryption_hint' => 'nullable|string|max:255',
         ]);
+
+        // Handle enabling encryption on existing note
+        $isEnablingEncryption = Arr::get($validated, 'is_encrypted') && !$note->is_encrypted;
+
+        $content = $note->is_encrypted ? $note->content : ($validated['content'] ?? '');
+        $excerpt = $note->is_encrypted ? $note->excerpt : null;
+
+        if ($isEnablingEncryption && !empty($validated['content'])) {
+            // Generate excerpt from plain content before encryption
+            $excerpt = Note::generateExcerpt($validated['content']);
+
+            // Encrypt the content and excerpt
+            $encryptedData = EncryptedNote::encryptNoteData(
+                $validated['content'],
+                $excerpt,
+                $validated['encryption_password']
+            );
+
+            // Store encrypted versions
+            $content = $encryptedData['encrypted_content'];
+            $excerpt = $encryptedData['encrypted_excerpt'];
+        }
 
         $note->update([
             'title' => $validated['title'],
-            'content' => $note->is_encrypted ? $note->content : ($validated['content'] ?? ''),
+            'content' => $content,
+            'excerpt' => $excerpt,
             'group_id' => $validated['group_id'] ?? null,
             'color' => $validated['color'] ?? null,
             'is_pinned' => $validated['is_pinned'] ?? false,
+            'is_encrypted' => $isEnablingEncryption ? true : $note->is_encrypted,
         ]);
+
+        // Create encrypted note record if enabling encryption
+        if ($isEnablingEncryption && !empty($validated['content'])) {
+            EncryptedNote::create([
+                'note_id' => $note->id,
+                'encryption_code_hash' => EncryptedNote::hashCode($validated['encryption_password']),
+                'encrypted_content' => '', // Content stored in notes table now
+                'encryption_iv' => $encryptedData['encryption_iv'],
+                'hint' => $validated['encryption_hint'] ?? null,
+            ]);
+        }
 
         // Sync tags
         $note->tags()->sync($validated['tag_ids'] ?? []);

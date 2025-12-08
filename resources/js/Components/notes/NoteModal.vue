@@ -480,10 +480,14 @@ async function handleSave() {
     const method = isCreating ? 'post' : 'put';
 
     // Combine all form data for full save
+    // Include encryption data if enabling encryption (for new notes OR converting existing note to encrypted)
+    const includeEncryption = encryptionForm.value.is_encrypted &&
+        (isCreating || !props.note?.is_encrypted);
+
     const payload = {
         ...contentForm.value,
         ...metaForm.value,
-        ...(isCreating && encryptionForm.value.is_encrypted ? encryptionForm.value : {}),
+        ...(includeEncryption ? encryptionForm.value : {}),
     };
 
     router[method](url, payload, {
@@ -740,8 +744,8 @@ function handleShare() {
                                 />
                             </div>
 
-                            <!-- Encryption Section (only for new notes) -->
-                            <div v-if="isNewNote" class="space-y-3">
+                            <!-- Encryption Section (for new notes OR non-encrypted existing notes) -->
+                            <div v-if="isNewNote || !props.note?.is_encrypted" class="space-y-3">
                                 <div class="flex items-center justify-between py-2">
                                     <div class="flex items-center gap-2">
                                         <Lock class="h-4 w-4 text-muted-foreground" />
@@ -784,8 +788,8 @@ function handleShare() {
                                 </div>
                             </div>
 
-                            <!-- Encrypted note indicator (for existing notes) -->
-                            <div v-if="!isNewNote && encryptionForm.is_encrypted" class="rounded-lg border border-muted bg-muted/30 p-3 sm:p-4">
+                            <!-- Encrypted note indicator (for existing encrypted notes) -->
+                            <div v-if="!isNewNote && props.note?.is_encrypted" class="rounded-lg border border-muted bg-muted/30 p-3 sm:p-4">
                                 <div class="flex items-center gap-3">
                                     <Lock class="h-5 w-5 text-muted-foreground" />
                                     <div>

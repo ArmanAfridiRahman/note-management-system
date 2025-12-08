@@ -171,13 +171,8 @@ onUnmounted(() => {
                     <span
                         v-for="opt in selectedOptions.slice(0, 3)"
                         :key="opt.value"
-                        class="inline-flex items-center gap-1 rounded bg-muted px-2 py-0.5 text-xs"
+                        class="inline-flex items-center gap-1 rounded border border-primary/50 bg-primary/10 text-primary px-2 py-0.5 text-xs"
                     >
-                        <span
-                            v-if="opt.color"
-                            class="h-2 w-2 rounded-full"
-                            :style="{ backgroundColor: opt.color }"
-                        />
                         {{ opt.label }}
                         <X
                             class="h-3 w-3 cursor-pointer hover:text-destructive"
@@ -279,11 +274,6 @@ onUnmounted(() => {
                     >
                         {{ option.avatar }}
                     </span>
-                    <span
-                        v-if="option.color"
-                        class="h-3 w-3 rounded-full"
-                        :style="{ backgroundColor: option.color }"
-                    />
                     <div class="flex flex-col items-start">
                         <span>{{ option.label }}</span>
                         <span v-if="option.description" class="text-xs text-muted-foreground">

@@ -43,7 +43,21 @@ class NoteApiController extends Controller
                 };
             }
 
-            if ($request->has('tag_id')) {
+            // Filter by tags (supports multiple via comma-separated string or array)
+            if ($request->has('tag_ids') || $request->has('tags')) {
+                $tagIds = $request->tag_ids ?? $request->tags;
+
+                // Handle comma-separated string
+                if (is_string($tagIds)) {
+                    $tagIds = array_filter(array_map('intval', explode(',', $tagIds)));
+                }
+
+                if (!empty($tagIds)) {
+                    foreach ($tagIds as $tagId) {
+                        $query->withTag($tagId);
+                    }
+                }
+            } elseif ($request->has('tag_id')) {
                 $query->withTag($request->tag_id);
             }
 
@@ -214,12 +228,14 @@ class NoteApiController extends Controller
                 'success' => false,
                 'message' => 'Too many failed attempts. Please try again later.',
                 'locked_until' => $encryptedNote->locked_until,
+                'lockout_remaining_seconds' => $encryptedNote->lockout_remaining_seconds,
             ], 429);
         }
 
-        $decrypted = $encryptedNote->decryptContent($request->code);
+        // Decrypt content (this also verifies the code against the bcrypt hash)
+        $decryptedContent = $encryptedNote->decryptContent($request->code);
 
-        if ($decrypted === null) {
+        if ($decryptedContent === null) {
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid decryption code.',
@@ -227,10 +243,14 @@ class NoteApiController extends Controller
             ], 400);
         }
 
+        // Also decrypt the excerpt
+        $decryptedExcerpt = $encryptedNote->decryptExcerpt($request->code);
+
         return response()->json([
             'success' => true,
             'data' => [
-                'content' => $decrypted,
+                'content' => $decryptedContent,
+                'excerpt' => $decryptedExcerpt,
             ],
         ]);
     }

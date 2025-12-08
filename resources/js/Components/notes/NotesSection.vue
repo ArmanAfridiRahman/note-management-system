@@ -272,7 +272,7 @@ const confirmUnlock = async () => {
             const decryptedNote: NoteData = {
                 ...noteToUnlock.value,
                 content: response.data.data.content,
-                excerpt: response.data.data.content?.substring(0, 200) || '',
+                excerpt: response.data.data.excerpt || response.data.data.content?.substring(0, 200) || '',
             };
 
             unlockModal.value = false;
