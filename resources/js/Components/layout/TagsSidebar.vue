@@ -181,60 +181,86 @@ onMounted(() => {
             </div>
 
             <!-- Tags List -->
-            <div class="space-y-0.5">
-                <!-- Loading State -->
-                <div v-if="isLoading && tags.length === 0" class="px-3 py-3 text-center">
-                    <Loader2 class="h-4 w-4 animate-spin mx-auto text-muted-foreground" />
-                </div>
+            <div class="max-h-[180px] overflow-y-auto scrollbar-thin">
+                <div class="space-y-0.5">
+                    <!-- Loading State -->
+                    <div v-if="isLoading && tags.length === 0" class="px-3 py-3 text-center">
+                        <Loader2 class="h-4 w-4 animate-spin mx-auto text-muted-foreground" />
+                    </div>
 
-                <!-- Empty State -->
-                <div
-                    v-else-if="tags.length === 0"
-                    class="px-3 py-3 text-center text-xs text-muted-foreground"
-                >
-                    {{ searchQuery ? 'No tags found' : 'No tags yet' }}
-                </div>
-
-                <!-- Tag Items -->
-                <template v-else>
-                    <button
-                        v-for="tag in displayedTags"
-                        :key="tag.id"
-                        type="button"
-                        :class="cn(
-                            'w-full flex items-center gap-2.5 rounded-md px-3 py-1.5 text-sm transition-all border-2',
-                            isSelected(tag.id)
-                                ? 'border-primary bg-primary/10 text-foreground font-medium'
-                                : 'border-transparent text-muted-foreground hover:bg-muted hover:text-foreground'
-                        )"
-                        @click="toggleTag(tag.id)"
+                    <!-- Empty State -->
+                    <div
+                        v-else-if="tags.length === 0"
+                        class="px-3 py-3 text-center text-xs text-muted-foreground"
                     >
-                        <span class="truncate flex-1 text-left">{{ tag.name }}</span>
-                        <span
-                            v-if="tag.notes_count !== undefined && tag.notes_count > 0"
+                        {{ searchQuery ? 'No tags found' : 'No tags yet' }}
+                    </div>
+
+                    <!-- Tag Items -->
+                    <template v-else>
+                        <button
+                            v-for="tag in displayedTags"
+                            :key="tag.id"
+                            type="button"
                             :class="cn(
-                                'text-[10px] px-1.5 py-0.5 rounded-full',
+                                'w-full flex items-center gap-2.5 rounded-md px-3 py-1.5 text-sm transition-all border-2',
                                 isSelected(tag.id)
-                                    ? 'bg-primary/20 text-primary'
-                                    : 'bg-muted text-muted-foreground'
+                                    ? 'border-primary bg-primary/10 text-foreground font-medium'
+                                    : 'border-transparent text-muted-foreground hover:bg-muted hover:text-foreground'
                             )"
+                            @click="toggleTag(tag.id)"
                         >
-                            {{ tag.notes_count }}
-                        </span>
-                    </button>
+                            <span class="truncate flex-1 text-left">{{ tag.name }}</span>
+                            <span
+                                v-if="tag.notes_count !== undefined && tag.notes_count > 0"
+                                :class="cn(
+                                    'text-[10px] px-1.5 py-0.5 rounded-full',
+                                    isSelected(tag.id)
+                                        ? 'bg-primary/20 text-primary'
+                                        : 'bg-muted text-muted-foreground'
+                                )"
+                            >
+                                {{ tag.notes_count }}
+                            </span>
+                        </button>
 
-                    <!-- Show More -->
-                    <button
-                        v-if="remainingCount > 0"
-                        type="button"
-                        class="w-full flex items-center gap-2.5 rounded-md px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                        @click="fetchTags"
-                    >
-                        <Hash class="h-3.5 w-3.5" />
-                        <span>{{ remainingCount }} more tags...</span>
-                    </button>
-                </template>
+                        <!-- Show More -->
+                        <button
+                            v-if="remainingCount > 0"
+                            type="button"
+                            class="w-full flex items-center gap-2.5 rounded-md px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                            @click="fetchTags"
+                        >
+                            <Hash class="h-3.5 w-3.5" />
+                            <span>{{ remainingCount }} more tags...</span>
+                        </button>
+                    </template>
+                </div>
             </div>
         </div>
     </div>
 </template>
+
+<style scoped>
+.scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.5);
+}
+</style>
