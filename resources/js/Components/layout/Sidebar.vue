@@ -35,8 +35,8 @@ interface NavItem {
 const mainNavItems: NavItem[] = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'All Notes', href: '/notes', icon: FileText },
-    { name: 'Favorites', href: '/notes?filter=favorites', icon: Star },
-    { name: 'Encrypted', href: '/notes?filter=encrypted', icon: Lock },
+    { name: 'Favorites', href: '/notes/favorites', icon: Star },
+    { name: 'Encrypted', href: '/notes/encrypted', icon: Lock },
     { name: 'Archived', href: '/notes/archived', icon: Archive },
 ];
 
@@ -46,29 +46,8 @@ const sharingItems: NavItem[] = [
 ];
 
 function isActive(href: string): boolean {
-    const currentUrl = currentRoute.value;
-    const currentPath = currentUrl.split('?')[0];
-    const currentParams = new URLSearchParams(currentUrl.split('?')[1] || '');
-
-    const targetPath = href.split('?')[0];
-    const targetParams = new URLSearchParams(href.split('?')[1] || '');
-
-    // Exact match for paths with query params
-    if (href.includes('?')) {
-        if (currentPath !== targetPath) return false;
-        // Check if all target params exist in current params
-        for (const [key, value] of targetParams.entries()) {
-            if (currentParams.get(key) !== value) return false;
-        }
-        return true;
-    }
-
-    // For paths without query params, ensure no filter is applied
-    if (targetPath === '/notes' && !href.includes('?')) {
-        return currentPath === '/notes' && !currentParams.has('filter');
-    }
-
-    return currentPath === targetPath;
+    const currentPath = currentRoute.value.split('?')[0];
+    return currentPath === href;
 }
 </script>
 
