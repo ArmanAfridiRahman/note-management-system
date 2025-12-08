@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import { Head, usePage } from '@inertiajs/vue3';
 import { AppLayout } from '@/Components/layout';
 import { NotesSection } from '@/Components/notes';
 import { Archive } from 'lucide-vue-next';
@@ -12,6 +13,18 @@ interface Props {
 }
 
 defineProps<Props>();
+const page = usePage();
+
+// Get tag filters from URL combined with archived filter
+const filters = computed(() => {
+    const searchParams = new URLSearchParams(page.url.split('?')[1] || '');
+    const tagsParam = searchParams.get('tags');
+    const baseFilters: Record<string, any> = { is_archived: true };
+    if (tagsParam) {
+        baseFilters.tags = tagsParam;
+    }
+    return baseFilters;
+});
 </script>
 
 <template>
@@ -32,8 +45,9 @@ defineProps<Props>();
         </div>
 
         <NotesSection
+            :key="page.url"
             fetch-url="/api/notes"
-            :filters="{ is_archived: true }"
+            :filters="filters"
             :tags="tags"
             :groups="groups"
             :users="users"

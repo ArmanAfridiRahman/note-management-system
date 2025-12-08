@@ -73,7 +73,9 @@ class Note extends Model
                 $note->slug = static::generateUniqueSlug($note->title, $note->user_id);
             }
 
-            if (empty($note->excerpt) && !empty($note->content)) {
+            // Only auto-generate excerpt for non-encrypted notes
+            // Encrypted notes have their excerpt set manually (with encrypted value)
+            if (!$note->is_encrypted && empty($note->excerpt) && !empty($note->content)) {
                 $note->excerpt = static::generateExcerpt($note->content);
             }
         });
@@ -83,7 +85,8 @@ class Note extends Model
                 $note->slug = static::generateUniqueSlug($note->title, $note->user_id, $note->id);
             }
 
-            if ($note->isDirty('content') && !empty($note->content)) {
+            // Only auto-generate excerpt for non-encrypted notes
+            if (!$note->is_encrypted && $note->isDirty('content') && !empty($note->content)) {
                 $note->excerpt = static::generateExcerpt($note->content);
             }
         });

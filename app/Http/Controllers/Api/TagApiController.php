@@ -11,13 +11,44 @@ class TagApiController extends Controller
 {
     /**
      * List all tags for the authenticated user
+     * Supports search and cursor-based pagination
      */
     public function index(Request $request): JsonResponse
     {
-        $tags = Tag::where('user_id', $request->user()->id)
-            ->withCount('notes')
-            ->ordered()
-            ->get();
+        $query = Tag::where('user_id', $request->user()->id)
+            ->withCount('notes');
+
+        // Search filter
+        if ($request->filled('q')) {
+            $query->where('name', 'like', '%' . $request->q . '%');
+        }
+
+        // Order by popularity (notes count) or name
+        if ($request->get('order') === 'popular') {
+            $query->orderByDesc('notes_count')->orderBy('name');
+        } else {
+            $query->ordered();
+        }
+
+        // Pagination
+        $perPage = min($request->get('per_page', 10), 50);
+
+        if ($request->has('cursor') || $request->has('page')) {
+            $tags = $query->cursorPaginate($perPage);
+
+            return response()->json([
+                'success' => true,
+                'data' => $tags->items(),
+                'meta' => [
+                    'has_more' => $tags->hasMorePages(),
+                    'next_cursor' => $tags->nextCursor()?->encode(),
+                    'per_page' => $perPage,
+                ],
+            ]);
+        }
+
+        // Return all tags if no pagination requested
+        $tags = $query->get();
 
         return response()->json([
             'success' => true,

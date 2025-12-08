@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { cn } from '@/lib/utils';
-import { Check, ChevronDown, X, Search } from 'lucide-vue-next';
+import { Check, ChevronDown, X, Search, Plus, Loader2 } from 'lucide-vue-next';
 
 interface Option {
     value: string | number;
@@ -21,6 +21,9 @@ interface Props {
     error?: string;
     multiple?: boolean;
     class?: string;
+    creatable?: boolean;
+    createLabel?: string;
+    creating?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -28,10 +31,14 @@ const props = withDefaults(defineProps<Props>(), {
     searchPlaceholder: 'Search...',
     disabled: false,
     multiple: false,
+    creatable: false,
+    createLabel: 'Create',
+    creating: false,
 });
 
 const emit = defineEmits<{
     'update:modelValue': [value: string | number | (string | number)[]];
+    'create': [value: string];
 }>();
 
 const isOpen = ref(false);
@@ -46,6 +53,27 @@ const filteredOptions = computed(() => {
             opt.label.toLowerCase().includes(query) ||
             opt.description?.toLowerCase().includes(query)
     );
+});
+
+// Show create option when creatable is enabled and search query doesn't exactly match any option
+const showCreateOption = computed(() => {
+    if (!props.creatable || !searchQuery.value.trim()) return false;
+    const query = searchQuery.value.trim().toLowerCase();
+    return !props.options.some(opt => opt.label.toLowerCase() === query);
+});
+
+function handleCreate() {
+    if (!searchQuery.value.trim()) return;
+    emit('create', searchQuery.value.trim());
+}
+
+function clearSearch() {
+    searchQuery.value = '';
+}
+
+// Expose methods for parent component
+defineExpose({
+    clearSearch,
 });
 
 const selectedOptions = computed(() => {
@@ -143,13 +171,8 @@ onUnmounted(() => {
                     <span
                         v-for="opt in selectedOptions.slice(0, 3)"
                         :key="opt.value"
-                        class="inline-flex items-center gap-1 rounded bg-muted px-2 py-0.5 text-xs"
+                        class="inline-flex items-center gap-1 rounded border border-primary/50 bg-primary/10 text-primary px-2 py-0.5 text-xs"
                     >
-                        <span
-                            v-if="opt.color"
-                            class="h-2 w-2 rounded-full"
-                            :style="{ backgroundColor: opt.color }"
-                        />
                         {{ opt.label }}
                         <X
                             class="h-3 w-3 cursor-pointer hover:text-destructive"
@@ -197,8 +220,28 @@ onUnmounted(() => {
 
             <!-- Options -->
             <div class="max-h-60 overflow-y-auto p-1">
+                <!-- Create New Option -->
+                <button
+                    v-if="showCreateOption"
+                    type="button"
+                    :disabled="creating"
+                    :class="cn(
+                        'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none',
+                        'hover:bg-primary/10 focus:bg-primary/10 text-primary font-medium',
+                        'border-b border-border mb-1 pb-2',
+                        creating && 'cursor-not-allowed opacity-50'
+                    )"
+                    @click="handleCreate"
+                >
+                    <div class="flex h-4 w-4 items-center justify-center">
+                        <Loader2 v-if="creating" class="h-3.5 w-3.5 animate-spin" />
+                        <Plus v-else class="h-3.5 w-3.5" />
+                    </div>
+                    <span>{{ createLabel }} "{{ searchQuery.trim() }}"</span>
+                </button>
+
                 <div
-                    v-if="filteredOptions.length === 0"
+                    v-if="filteredOptions.length === 0 && !showCreateOption"
                     class="py-6 text-center text-sm text-muted-foreground"
                 >
                     No results found
@@ -231,11 +274,6 @@ onUnmounted(() => {
                     >
                         {{ option.avatar }}
                     </span>
-                    <span
-                        v-if="option.color"
-                        class="h-3 w-3 rounded-full"
-                        :style="{ backgroundColor: option.color }"
-                    />
                     <div class="flex flex-col items-start">
                         <span>{{ option.label }}</span>
                         <span v-if="option.description" class="text-xs text-muted-foreground">

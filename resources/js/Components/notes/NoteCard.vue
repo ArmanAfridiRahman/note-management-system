@@ -256,6 +256,23 @@ const handleClick = () => {
                 </Dropdown>
             </div>
 
+            <!-- Tags for encrypted notes -->
+            <div v-if="note.tags && note.tags.length" class="absolute bottom-10 left-4 right-4 flex flex-wrap gap-1 justify-center">
+                <span
+                    v-for="tag in note.tags.slice(0, 2)"
+                    :key="tag.id"
+                    class="inline-flex items-center px-1.5 py-0.5 rounded border border-primary/50 bg-primary/10 text-[10px] font-medium text-primary"
+                >
+                    {{ tag.name }}
+                </span>
+                <span
+                    v-if="note.tags.length > 2"
+                    class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] text-muted-foreground"
+                >
+                    +{{ note.tags.length - 2 }}
+                </span>
+            </div>
+
             <!-- Footer -->
             <div class="absolute bottom-3 left-4 right-4 flex items-center justify-between text-[10px] text-muted-foreground pt-2 border-t border-border/30">
                 <span>{{ formattedDate }}</span>
@@ -348,11 +365,11 @@ const handleClick = () => {
             <div class="flex-1" />
 
             <!-- Tags -->
-            <div v-if="note.tags.length" class="flex flex-wrap gap-1 mt-2">
+            <div v-if="note.tags && note.tags.length" class="flex flex-wrap gap-1 mt-2">
                 <span
                     v-for="tag in note.tags.slice(0, 2)"
                     :key="tag.id"
-                    class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-foreground/5 text-muted-foreground"
+                    class="inline-flex items-center px-1.5 py-0.5 rounded border border-primary/50 bg-primary/10 text-[10px] font-medium text-primary"
                 >
                     {{ tag.name }}
                 </span>

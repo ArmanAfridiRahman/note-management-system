@@ -78,6 +78,18 @@ const showOptions = ref(false);
 const titleInput = ref<InstanceType<typeof Input> | null>(null);
 const currentNoteId = ref<number | undefined>(undefined);
 
+// Refs for ComboBox components
+const tagComboBox = ref<InstanceType<typeof ComboBox> | null>(null);
+const groupComboBox = ref<InstanceType<typeof ComboBox> | null>(null);
+
+// Creating state for tags and groups
+const creatingTag = ref(false);
+const creatingGroup = ref(false);
+
+// Local tags and groups (for when new ones are created)
+const localTags = ref<TagData[]>([]);
+const localGroups = ref<GroupData[]>([]);
+
 // Core content form (auto-saved)
 const contentForm = ref({
     title: '',
@@ -157,8 +169,22 @@ const colorOptions = [
     { value: '#e5e7eb', label: 'Gray', class: 'bg-gray-200 border-gray-300' },
 ];
 
+// Combine props tags with locally created tags
+const allTags = computed(() => {
+    const propTagIds = new Set(props.tags.map(t => t.id));
+    const newTags = localTags.value.filter(t => !propTagIds.has(t.id));
+    return [...props.tags, ...newTags];
+});
+
+// Combine props groups with locally created groups
+const allGroups = computed(() => {
+    const propGroupIds = new Set(props.groups.map(g => g.id));
+    const newGroups = localGroups.value.filter(g => !propGroupIds.has(g.id));
+    return [...props.groups, ...newGroups];
+});
+
 const tagOptions = computed(() =>
-    props.tags.map((tag) => ({
+    allTags.value.map((tag) => ({
         value: tag.id,
         label: tag.name,
         color: tag.color,
@@ -167,7 +193,7 @@ const tagOptions = computed(() =>
 
 const groupOptions = computed(() => [
     { value: '', label: 'No Group' },
-    ...props.groups.map((group) => ({
+    ...allGroups.value.map((group) => ({
         value: group.id.toString(),
         label: group.name,
         color: group.color,
@@ -274,6 +300,9 @@ function resetForm() {
     // Auto-show options panel if encryption is enabled by default
     showOptions.value = props.defaultValues?.is_encrypted ?? false;
     currentNoteId.value = undefined;
+    // Reset local tags/groups
+    localTags.value = [];
+    localGroups.value = [];
 }
 
 function populateForm(note: NoteData) {
@@ -355,6 +384,88 @@ async function updateGroup(groupId: string | number | (string | number)[]) {
     }
 }
 
+// Generate a random color for new tags
+function generateRandomColor(): string {
+    const colors = [
+        '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16',
+        '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9',
+        '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef',
+        '#ec4899', '#f43f5e',
+    ];
+    return colors[Math.floor(Math.random() * colors.length)];
+}
+
+// Create a new tag
+async function handleCreateTag(name: string) {
+    if (creatingTag.value) return;
+
+    creatingTag.value = true;
+    try {
+        const response = await axios.post('/api/tags', {
+            name,
+            color: generateRandomColor(),
+        });
+
+        if (response.data.success) {
+            const newTag = response.data.data as TagData;
+            localTags.value.push(newTag);
+
+            // Add the new tag to selected tags
+            metaForm.value.tag_ids = [...metaForm.value.tag_ids, newTag.id];
+
+            // Update the note if it exists
+            if (currentNoteId.value) {
+                await axios.patch(`/api/notes/${currentNoteId.value}/tags`, {
+                    tag_ids: metaForm.value.tag_ids
+                });
+                emit('saved');
+            }
+
+            // Clear the search
+            tagComboBox.value?.clearSearch();
+        }
+    } catch (err) {
+        console.error('Failed to create tag:', err);
+    } finally {
+        creatingTag.value = false;
+    }
+}
+
+// Create a new group
+async function handleCreateGroup(name: string) {
+    if (creatingGroup.value) return;
+
+    creatingGroup.value = true;
+    try {
+        const response = await axios.post('/api/groups', {
+            name,
+        });
+
+        if (response.data.success) {
+            const newGroup = response.data.data as GroupData;
+            localGroups.value.push(newGroup);
+
+            // Select the new group
+            metaForm.value.group_id = newGroup.id.toString();
+
+            // Update the note if it exists
+            if (currentNoteId.value) {
+                await axios.post(`/api/notes/${currentNoteId.value}/add-to-group`, {
+                    group_id: newGroup.id
+                });
+                emit('saved');
+            }
+
+            // Clear the search
+            groupComboBox.value?.clearSearch();
+        }
+    } catch (err) {
+        console.error('Failed to create group:', err);
+    } finally {
+        creatingGroup.value = false;
+    }
+}
+
 async function handleSave() {
     if (!canSave.value || submitting.value) return;
 
@@ -369,10 +480,14 @@ async function handleSave() {
     const method = isCreating ? 'post' : 'put';
 
     // Combine all form data for full save
+    // Include encryption data if enabling encryption (for new notes OR converting existing note to encrypted)
+    const includeEncryption = encryptionForm.value.is_encrypted &&
+        (isCreating || !props.note?.is_encrypted);
+
     const payload = {
         ...contentForm.value,
         ...metaForm.value,
-        ...(isCreating && encryptionForm.value.is_encrypted ? encryptionForm.value : {}),
+        ...(includeEncryption ? encryptionForm.value : {}),
     };
 
     router[method](url, payload, {
@@ -546,10 +661,10 @@ function handleShare() {
                         <Badge
                             v-for="tagId in metaForm.tag_ids"
                             :key="tagId"
-                            :color="tags.find(t => t.id === tagId)?.color"
+                            :color="allTags.find(t => t.id === tagId)?.color"
                             size="sm"
                         >
-                            {{ tags.find(t => t.id === tagId)?.name }}
+                            {{ allTags.find(t => t.id === tagId)?.name }}
                         </Badge>
                     </div>
 
@@ -597,10 +712,15 @@ function handleShare() {
                                     Group
                                 </Label>
                                 <ComboBox
+                                    ref="groupComboBox"
                                     :model-value="metaForm.group_id"
                                     :options="groupOptions"
                                     placeholder="Select a group..."
+                                    creatable
+                                    create-label="Create group"
+                                    :creating="creatingGroup"
                                     @update:model-value="updateGroup"
+                                    @create="handleCreateGroup"
                                 />
                             </div>
 
@@ -611,16 +731,21 @@ function handleShare() {
                                     Tags
                                 </Label>
                                 <ComboBox
+                                    ref="tagComboBox"
                                     :model-value="metaForm.tag_ids"
                                     :options="tagOptions"
                                     placeholder="Select tags..."
                                     multiple
+                                    creatable
+                                    create-label="Create tag"
+                                    :creating="creatingTag"
                                     @update:model-value="updateTags"
+                                    @create="handleCreateTag"
                                 />
                             </div>
 
-                            <!-- Encryption Section (only for new notes) -->
-                            <div v-if="isNewNote" class="space-y-3">
+                            <!-- Encryption Section (for new notes OR non-encrypted existing notes) -->
+                            <div v-if="isNewNote || !props.note?.is_encrypted" class="space-y-3">
                                 <div class="flex items-center justify-between py-2">
                                     <div class="flex items-center gap-2">
                                         <Lock class="h-4 w-4 text-muted-foreground" />
@@ -663,8 +788,8 @@ function handleShare() {
                                 </div>
                             </div>
 
-                            <!-- Encrypted note indicator (for existing notes) -->
-                            <div v-if="!isNewNote && encryptionForm.is_encrypted" class="rounded-lg border border-muted bg-muted/30 p-3 sm:p-4">
+                            <!-- Encrypted note indicator (for existing encrypted notes) -->
+                            <div v-if="!isNewNote && props.note?.is_encrypted" class="rounded-lg border border-muted bg-muted/30 p-3 sm:p-4">
                                 <div class="flex items-center gap-3">
                                     <Lock class="h-5 w-5 text-muted-foreground" />
                                     <div>
