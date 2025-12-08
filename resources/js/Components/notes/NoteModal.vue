@@ -3,10 +3,11 @@ import { ref, computed, watch, nextTick } from 'vue';
 import { router } from '@inertiajs/vue3';
 import axios from 'axios';
 import { Dialog, Button, Input, Textarea, Label, Badge, Toggle, ComboBox } from '@/Components/ui';
+import { UserAvatar } from '@/Components/shared';
 import { cn } from '@/lib/utils';
 import { useAutoSave } from '@/Composables/useAutoSave';
 import { appConfig } from '@/config/app';
-import type { NoteData, TagData, GroupData } from '@/types/models';
+import type { NoteData, TagData, GroupData, UserData } from '@/types/models';
 import {
     X,
     Save,
@@ -235,6 +236,21 @@ const saveStatusText = computed(() => {
     }
     if (isDirty.value) return 'Unsaved changes';
     return '';
+});
+
+// Shared users display
+const sharedUsers = computed(() => {
+    if (!props.note?.shares || props.note.shares.length === 0) return [];
+    return props.note.shares
+        .filter(share => share.shared_with_user)
+        .map(share => share.shared_with_user!)
+        .slice(0, 5);
+});
+
+const additionalSharesCount = computed(() => {
+    if (!props.note?.shares) return 0;
+    const validShares = props.note.shares.filter(share => share.shared_with_user);
+    return Math.max(0, validShares.length - 5);
 });
 
 watch(
@@ -614,9 +630,29 @@ function handleShare() {
                             </div>
                         </div>
                     </div>
-                    <Button variant="ghost" size="icon" @click="handleClose">
-                        <X class="w-5 h-5" />
-                    </Button>
+                    <div class="flex items-center gap-3">
+                        <!-- Shared Users -->
+                        <div v-if="sharedUsers.length > 0" class="flex items-center gap-2">
+                            <span class="text-xs text-muted-foreground hidden sm:inline">Shared with</span>
+                            <div class="flex items-center -space-x-2">
+                                <UserAvatar
+                                    v-for="user in sharedUsers"
+                                    :key="user.id"
+                                    :user="user"
+                                    size="sm"
+                                />
+                                <div
+                                    v-if="additionalSharesCount > 0"
+                                    class="w-7 h-7 rounded-full border-2 border-background bg-muted flex items-center justify-center text-xs font-medium text-muted-foreground"
+                                >
+                                    +{{ additionalSharesCount }}
+                                </div>
+                            </div>
+                        </div>
+                        <Button variant="ghost" size="icon" @click="handleClose">
+                            <X class="w-5 h-5" />
+                        </Button>
+                    </div>
                 </div>
 
                 <!-- Content Area -->

@@ -56,4 +56,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // User Preferences API
     Route::get('/user/preferences', [UserApiController::class, 'preferences']);
     Route::put('/user/preferences', [UserApiController::class, 'updatePreferences']);
+
+    // User Profile API
+    Route::post('/user/avatar', [UserApiController::class, 'uploadAvatar']);
+    Route::delete('/user/avatar', [UserApiController::class, 'deleteAvatar']);
+    Route::put('/user/colors', [UserApiController::class, 'updateColors']);
 });

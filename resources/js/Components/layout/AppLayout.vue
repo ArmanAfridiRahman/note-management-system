@@ -13,6 +13,7 @@ import {
 } from 'lucide-vue-next';
 import { Dropdown, DropdownItem } from '@/Components/ui';
 import { useFlashToast } from '@/Composables/useFlashToast';
+import { useUserTheme } from '@/Composables/useUserTheme';
 
 interface Props {
     title?: string;
@@ -20,11 +21,21 @@ interface Props {
 
 defineProps<Props>();
 
+interface AuthUser {
+    id: number;
+    name: string;
+    email: string;
+    avatar_url: string;
+}
+
 const page = usePage();
-const user = computed(() => page.props.auth?.user);
+const user = computed(() => page.props.auth?.user as AuthUser | undefined);
 
 // Initialize flash toast listener
 useFlashToast();
+
+// Apply user's custom theme color
+useUserTheme();
 
 const sidebarOpen = ref(false);
 
@@ -79,7 +90,13 @@ function toggleSidebar() {
                     <Dropdown align="right">
                         <template #trigger>
                             <Button variant="ghost" class="flex items-center gap-2">
-                                <div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                                <img
+                                    v-if="user?.avatar_url"
+                                    :src="user.avatar_url"
+                                    :alt="user.name"
+                                    class="h-8 w-8 rounded-full object-cover"
+                                />
+                                <div v-else class="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
                                     <User class="h-4 w-4" />
                                 </div>
                                 <span class="hidden md:inline">{{ user?.name }}</span>

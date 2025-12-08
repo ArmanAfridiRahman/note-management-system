@@ -26,6 +26,7 @@ class User extends Authenticatable
         'email',
         'password',
         'avatar',
+        'color',
         'preferences',
     ];
 
@@ -40,6 +41,17 @@ class User extends Authenticatable
     ];
 
     /**
+     * The accessors to append to the model's array form.
+     *
+     * @var list<string>
+     */
+    protected $appends = [
+        'display_color',
+        'initials',
+        'avatar_url',
+    ];
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -51,6 +63,50 @@ class User extends Authenticatable
             'password' => 'hashed',
             'preferences' => 'array',
         ];
+    }
+
+    /**
+     * Default primary color (used when user hasn't set a custom color).
+     */
+    public const DEFAULT_COLOR = '#ef4444';
+
+    /**
+     * Get the user's display color (custom or default).
+     */
+    public function getDisplayColorAttribute(): string
+    {
+        return $this->color ?? self::DEFAULT_COLOR;
+    }
+
+    /**
+     * Get the user's initials.
+     */
+    public function getInitialsAttribute(): string
+    {
+        $words = explode(' ', trim($this->name));
+        $initials = '';
+        foreach (array_slice($words, 0, 2) as $word) {
+            $initials .= mb_strtoupper(mb_substr($word, 0, 1));
+        }
+        return $initials ?: 'U';
+    }
+
+    /**
+     * Get the user's avatar URL with fallback to generated avatar.
+     */
+    public function getAvatarUrlAttribute(): string
+    {
+        // If user has uploaded avatar, return it with cache-busting
+        if ($this->avatar) {
+            $timestamp = $this->updated_at?->timestamp ?? time();
+            return url($this->avatar) . '?v=' . $timestamp;
+        }
+
+        // Generate fallback avatar using UI Avatars service
+        $name = urlencode($this->name);
+        $color = ltrim($this->display_color, '#');
+
+        return "https://ui-avatars.com/api/?name={$name}&background={$color}&color=ffffff&size=128&bold=true";
     }
 
     /**

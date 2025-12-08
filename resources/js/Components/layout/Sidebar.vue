@@ -35,7 +35,16 @@ const emit = defineEmits<{
 const page = usePage();
 const toast = useToast();
 const currentRoute = computed(() => page.url);
-const user = computed(() => page.props.auth?.user as { name: string; email: string } | null);
+interface AuthUser {
+    id: number;
+    name: string;
+    email: string;
+    avatar_url: string;
+    display_color: string;
+    initials: string;
+}
+
+const user = computed(() => page.props.auth?.user as AuthUser | null);
 
 // Auto-save preference
 const autoSave = ref(true);
@@ -92,15 +101,6 @@ const sharingItems: NavItem[] = [
 function isActive(href: string): boolean {
     const currentPath = currentRoute.value.split('?')[0];
     return currentPath === href;
-}
-
-function getUserInitials(name: string): string {
-    return name
-        .split(' ')
-        .map(n => n.charAt(0))
-        .join('')
-        .toUpperCase()
-        .slice(0, 2);
 }
 </script>
 
@@ -201,9 +201,11 @@ function getUserInitials(name: string): string {
 
             <!-- User Profile -->
             <div v-if="user" class="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                <div class="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-medium">
-                    {{ getUserInitials(user.name) }}
-                </div>
+                <img
+                    :src="user.avatar_url"
+                    :alt="user.name"
+                    class="h-9 w-9 rounded-full object-cover"
+                />
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-medium text-foreground truncate">{{ user.name }}</p>
                     <p class="text-xs text-muted-foreground truncate">{{ user.email }}</p>
