@@ -39,6 +39,26 @@ export interface NoteShareData {
     created_at: string;
 }
 
+// Share metadata for "Shared With Me" notes
+export interface SharedWithMeData {
+    id: number;
+    permission: 'view' | 'edit';
+    expires_at?: string;
+    message?: string;
+    shared_by: UserData;
+    created_at: string;
+}
+
+// Share recipient for "Shared By Me" notes
+export interface ShareRecipientData {
+    id: number;
+    user: UserData;
+    permission: 'view' | 'edit';
+    expires_at?: string;
+    message?: string;
+    created_at: string;
+}
+
 export interface ParentSnapshot {
     title: string;
     content?: string;
@@ -76,6 +96,12 @@ export interface NoteData {
     archived_at?: string;
     created_at: string;
     updated_at: string;
+    // Share context fields (added by API for shared pages)
+    share?: SharedWithMeData;
+    is_shared_with_me?: boolean;
+    share_recipients?: ShareRecipientData[];
+    is_shared_by_me?: boolean;
+    user?: UserData; // Note owner (for shared with me)
 }
 
 // For creating/editing notes where id might not exist yet

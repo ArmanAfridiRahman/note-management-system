@@ -54,7 +54,7 @@ const justDropped = ref(false);
 
 const formattedDate = computed(() => formatRelativeTime(props.note.updated_at));
 
-// Shared users display
+// Shared users display (for regular notes showing who they're shared with)
 const sharedUsers = computed(() => {
     if (!props.note.shares || props.note.shares.length === 0) return [];
     return props.note.shares
@@ -67,6 +67,31 @@ const additionalSharesCount = computed(() => {
     if (!props.note.shares) return 0;
     const validShares = props.note.shares.filter(share => share.shared_with_user);
     return Math.max(0, validShares.length - 5);
+});
+
+// Share context for "Shared With Me" page - who shared this note with me
+const sharedByUser = computed(() => {
+    if (props.note.is_shared_with_me && props.note.share?.shared_by) {
+        return props.note.share.shared_by;
+    }
+    return null;
+});
+
+const sharePermission = computed(() => {
+    return props.note.share?.permission || null;
+});
+
+// Share recipients for "Shared By Me" page - who I shared this note with
+const shareRecipients = computed(() => {
+    if (props.note.is_shared_by_me && props.note.share_recipients) {
+        return props.note.share_recipients.map(r => r.user).slice(0, 5);
+    }
+    return [];
+});
+
+const additionalRecipientsCount = computed(() => {
+    if (!props.note.share_recipients) return 0;
+    return Math.max(0, props.note.share_recipients.length - 5);
 });
 
 // Check if the currently dragging note is different from this one
@@ -291,8 +316,35 @@ const handleClick = () => {
             <!-- Footer -->
             <div class="absolute bottom-3 left-4 right-4 flex items-center justify-between text-[10px] text-muted-foreground pt-2 border-t border-border/30">
                 <span>{{ formattedDate }}</span>
-                <!-- Shared Users -->
-                <div v-if="sharedUsers.length > 0" class="flex items-center -space-x-1.5">
+
+                <!-- Shared By (for "Shared With Me" page) -->
+                <div v-if="sharedByUser" class="flex items-center gap-1.5">
+                    <span class="text-muted-foreground/70">by</span>
+                    <UserAvatar :user="sharedByUser" size="xs" />
+                    <span class="font-medium text-foreground truncate max-w-[60px]">{{ sharedByUser.name.split(' ')[0] }}</span>
+                </div>
+
+                <!-- Share Recipients (for "Shared By Me" page) -->
+                <div v-else-if="shareRecipients.length > 0" class="flex items-center gap-1.5">
+                    <span class="text-muted-foreground/70">with</span>
+                    <div class="flex items-center -space-x-1.5">
+                        <UserAvatar
+                            v-for="user in shareRecipients"
+                            :key="user.id"
+                            :user="user"
+                            size="xs"
+                        />
+                        <div
+                            v-if="additionalRecipientsCount > 0"
+                            class="w-5 h-5 rounded-full border-2 border-background bg-muted flex items-center justify-center text-[8px] font-medium text-muted-foreground"
+                        >
+                            +{{ additionalRecipientsCount }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Regular Shared Users -->
+                <div v-else-if="sharedUsers.length > 0" class="flex items-center -space-x-1.5">
                     <UserAvatar
                         v-for="user in sharedUsers"
                         :key="user.id"
@@ -414,8 +466,45 @@ const handleClick = () => {
             <!-- Footer -->
             <div class="flex items-center justify-between mt-2 pt-2 border-t border-border/30 text-[10px] text-muted-foreground">
                 <span>{{ formattedDate }}</span>
-                <!-- Shared Users -->
-                <div v-if="sharedUsers.length > 0" class="flex items-center -space-x-1.5">
+
+                <!-- Shared By (for "Shared With Me" page) -->
+                <div v-if="sharedByUser" class="flex items-center gap-1.5">
+                    <span class="text-muted-foreground/70">by</span>
+                    <UserAvatar :user="sharedByUser" size="xs" />
+                    <span class="font-medium text-foreground truncate max-w-[60px]">{{ sharedByUser.name.split(' ')[0] }}</span>
+                    <span
+                        :class="[
+                            'px-1 py-0.5 rounded text-[8px] font-medium',
+                            sharePermission === 'edit'
+                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                        ]"
+                    >
+                        {{ sharePermission === 'edit' ? 'Edit' : 'View' }}
+                    </span>
+                </div>
+
+                <!-- Share Recipients (for "Shared By Me" page) -->
+                <div v-else-if="shareRecipients.length > 0" class="flex items-center gap-1.5">
+                    <span class="text-muted-foreground/70">with</span>
+                    <div class="flex items-center -space-x-1.5">
+                        <UserAvatar
+                            v-for="user in shareRecipients"
+                            :key="user.id"
+                            :user="user"
+                            size="xs"
+                        />
+                        <div
+                            v-if="additionalRecipientsCount > 0"
+                            class="w-5 h-5 rounded-full border-2 border-background bg-muted flex items-center justify-center text-[8px] font-medium text-muted-foreground"
+                        >
+                            +{{ additionalRecipientsCount }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Regular Shared Users (for other pages) -->
+                <div v-else-if="sharedUsers.length > 0" class="flex items-center -space-x-1.5">
                     <UserAvatar
                         v-for="user in sharedUsers"
                         :key="user.id"

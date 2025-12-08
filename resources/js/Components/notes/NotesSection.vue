@@ -133,10 +133,18 @@ defineExpose({
 });
 
 // Note actions
-const handleView = (note: NoteData) => {
+const handleView = async (note: NoteData) => {
     selectedNote.value = note;
     noteModalMode.value = 'edit';
     noteModalOpen.value = true;
+
+    // Increment open count in background
+    try {
+        await axios.post(`/api/notes/${note.id}/open`);
+    } catch (err) {
+        // Silently fail - not critical
+        console.error('Failed to increment open count:', err);
+    }
 };
 
 const handleEdit = (note: NoteData) => {
@@ -417,6 +425,13 @@ const confirmUnlock = async () => {
             noteModalMode.value = 'edit';
             noteModalOpen.value = true;
             toast.success('Note unlocked successfully.');
+
+            // Increment open count in background
+            try {
+                await axios.post(`/api/notes/${noteToUnlock.value.id}/open`);
+            } catch (err) {
+                // Silently fail - not critical
+            }
         }
     } catch (error: any) {
         if (error.response?.status === 429) {

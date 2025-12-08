@@ -114,6 +114,12 @@ const encryptionForm = ref({
     encryption_hint: '',
 });
 
+// Remove encryption state
+const showRemoveEncryption = ref(false);
+const removeEncryptionCode = ref('');
+const removeEncryptionError = ref('');
+const removingEncryption = ref(false);
+
 const autoSaveEnabled = ref(false);
 
 // Auto-save functionality for core content only
@@ -337,6 +343,10 @@ function resetForm() {
     // Reset local tags/groups
     localTags.value = [];
     localGroups.value = [];
+    // Reset remove encryption state
+    showRemoveEncryption.value = false;
+    removeEncryptionCode.value = '';
+    removeEncryptionError.value = '';
 }
 
 function populateForm(note: NoteData) {
@@ -618,6 +628,44 @@ function handleShare() {
         });
     }
 }
+
+async function handleRemoveEncryption() {
+    if (!currentNoteId.value || !removeEncryptionCode.value || removingEncryption.value) return;
+
+    removingEncryption.value = true;
+    removeEncryptionError.value = '';
+
+    try {
+        const response = await axios.post(`/api/notes/${currentNoteId.value}/remove-encryption`, {
+            code: removeEncryptionCode.value,
+        });
+
+        if (response.data.success) {
+            // Update the form with decrypted content
+            const note = response.data.data;
+            contentForm.value.content = note.content || '';
+            encryptionForm.value.is_encrypted = false;
+
+            // Reset remove encryption state
+            showRemoveEncryption.value = false;
+            removeEncryptionCode.value = '';
+
+            // Emit saved to refresh the notes list
+            emit('saved');
+
+            // Close and reopen to refresh the note data
+            handleClose();
+        }
+    } catch (err: any) {
+        if (err.response?.data?.message) {
+            removeEncryptionError.value = err.response.data.message;
+        } else {
+            removeEncryptionError.value = 'Failed to remove encryption';
+        }
+    } finally {
+        removingEncryption.value = false;
+    }
+}
 </script>
 
 <template>
@@ -856,12 +904,63 @@ function handleShare() {
                             </div>
 
                             <!-- Encrypted note indicator (for existing encrypted notes) -->
-                            <div v-if="!isNewNote && props.note?.is_encrypted" class="rounded-lg border border-muted bg-muted/30 p-3 sm:p-4">
-                                <div class="flex items-center gap-3">
-                                    <Lock class="h-5 w-5 text-muted-foreground" />
-                                    <div>
-                                        <p class="text-sm font-medium">This note is encrypted</p>
-                                        <p class="text-xs text-muted-foreground">Content is hidden and requires your encryption code to view</p>
+                            <div v-if="!isNewNote && props.note?.is_encrypted" class="space-y-3">
+                                <div class="rounded-lg border border-muted bg-muted/30 p-3 sm:p-4">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-3">
+                                            <Lock class="h-5 w-5 text-muted-foreground" />
+                                            <div>
+                                                <p class="text-sm font-medium">This note is encrypted</p>
+                                                <p class="text-xs text-muted-foreground">Content requires your encryption code to view</p>
+                                            </div>
+                                        </div>
+                                        <Button
+                                            v-if="!showRemoveEncryption"
+                                            variant="outline"
+                                            size="sm"
+                                            @click="showRemoveEncryption = true"
+                                        >
+                                            Remove Encryption
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                <!-- Remove Encryption Form -->
+                                <div v-if="showRemoveEncryption" class="rounded-lg border border-destructive/50 bg-destructive/5 p-3 sm:p-4 space-y-3">
+                                    <div class="flex items-start gap-3">
+                                        <Lock class="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+                                        <div class="flex-1 space-y-3">
+                                            <div>
+                                                <p class="text-sm font-medium text-destructive">Remove Encryption</p>
+                                                <p class="text-xs text-muted-foreground">Enter your encryption code to permanently decrypt this note. This action cannot be undone.</p>
+                                            </div>
+                                            <div class="space-y-2">
+                                                <Input
+                                                    v-model="removeEncryptionCode"
+                                                    type="password"
+                                                    placeholder="Enter your encryption code"
+                                                    :error="removeEncryptionError"
+                                                />
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <Button
+                                                    variant="destructive"
+                                                    size="sm"
+                                                    @click="handleRemoveEncryption"
+                                                    :disabled="removingEncryption || !removeEncryptionCode"
+                                                >
+                                                    <Loader2 v-if="removingEncryption" class="mr-1.5 h-4 w-4 animate-spin" />
+                                                    {{ removingEncryption ? 'Removing...' : 'Remove Encryption' }}
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    @click="showRemoveEncryption = false; removeEncryptionCode = ''; removeEncryptionError = ''"
+                                                >
+                                                    Cancel
+                                                </Button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -877,8 +976,8 @@ function handleShare() {
                 <!-- Footer -->
                 <div class="border-t border-border px-4 sm:px-6 py-3 sm:py-4 bg-muted/30">
                     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
-                        <!-- Left Actions - scrollable on mobile -->
-                        <div class="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 -mx-1 px-1">
+                        <!-- Left Actions -->
+                        <div class="flex items-center gap-1 flex-wrap">
                             <Button
                                 v-if="isEditing"
                                 variant="ghost"
