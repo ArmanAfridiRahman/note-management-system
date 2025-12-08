@@ -261,6 +261,74 @@ class NoteApiController extends Controller
     }
 
     /**
+     * Remove encryption from a note (permanently decrypt it)
+     */
+    public function removeEncryption(Request $request, Note $note): JsonResponse
+    {
+        $this->authorize('update', $note);
+
+        if (!$note->is_encrypted) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This note is not encrypted.',
+            ], 400);
+        }
+
+        $request->validate([
+            'code' => 'required|string',
+        ]);
+
+        $encryptedNote = $note->encryptedContent;
+
+        if (!$encryptedNote) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Encrypted content not found.',
+            ], 404);
+        }
+
+        if ($encryptedNote->isLocked()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Too many failed attempts. Please try again later.',
+                'locked_until' => $encryptedNote->locked_until,
+            ], 429);
+        }
+
+        // Decrypt the content
+        $decryptedContent = $encryptedNote->decryptContent($request->code);
+
+        if ($decryptedContent === null) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid decryption code.',
+                'remaining_attempts' => $encryptedNote->remaining_attempts,
+            ], 400);
+        }
+
+        // Decrypt the excerpt
+        $decryptedExcerpt = $encryptedNote->decryptExcerpt($request->code);
+
+        // Update the note with decrypted content
+        $note->update([
+            'content' => $decryptedContent,
+            'excerpt' => $decryptedExcerpt ?: Note::generateExcerpt($decryptedContent),
+            'is_encrypted' => false,
+        ]);
+
+        // Delete the encrypted note record
+        $encryptedNote->delete();
+
+        $note->load(['tags', 'group']);
+
+        return response()->json([
+            'success' => true,
+            'data' => $note,
+            'message' => 'Encryption removed successfully.',
+        ]);
+    }
+
+    /**
      * Toggle pin status
      */
     public function togglePin(Request $request, Note $note): JsonResponse

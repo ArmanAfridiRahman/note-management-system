@@ -245,7 +245,7 @@ onMounted(() => {
 /* Using unscoped styles for scrollbar to work with dark mode */
 .tags-scrollbar {
     scrollbar-width: thin;
-    scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+    scrollbar-color: rgb(107 114 128 / 0.3) transparent;
 }
 
 .tags-scrollbar::-webkit-scrollbar {
@@ -258,28 +258,28 @@ onMounted(() => {
 }
 
 .tags-scrollbar::-webkit-scrollbar-thumb {
-    background-color: hsl(var(--muted-foreground) / 0.3);
+    background-color: rgb(107 114 128 / 0.3);
     border-radius: 3px;
 }
 
 .tags-scrollbar::-webkit-scrollbar-thumb:hover {
-    background-color: hsl(var(--muted-foreground) / 0.5);
+    background-color: rgb(107 114 128 / 0.5);
 }
 
-/* Dark mode - uses the existing CSS variables which auto-adjust */
+/* Dark mode */
 .dark .tags-scrollbar {
-    scrollbar-color: hsl(var(--muted-foreground) / 0.4) hsl(var(--muted) / 0.2);
+    scrollbar-color: rgb(156 163 175 / 0.4) rgb(26 26 46 / 0.3);
 }
 
 .dark .tags-scrollbar::-webkit-scrollbar-track {
-    background: hsl(var(--muted) / 0.2);
+    background: rgb(26 26 46 / 0.3);
 }
 
 .dark .tags-scrollbar::-webkit-scrollbar-thumb {
-    background-color: hsl(var(--muted-foreground) / 0.4);
+    background-color: rgb(156 163 175 / 0.4);
 }
 
 .dark .tags-scrollbar::-webkit-scrollbar-thumb:hover {
-    background-color: hsl(var(--muted-foreground) / 0.6);
+    background-color: rgb(156 163 175 / 0.6);
 }
 </style>

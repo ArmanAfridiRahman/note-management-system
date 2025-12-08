@@ -20,6 +20,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/notes/with-groups', [NoteApiController::class, 'withGroups']);
     Route::get('/notes/{note}', [NoteApiController::class, 'show']);
     Route::post('/notes/{note}/decrypt', [NoteApiController::class, 'decrypt']);
+    Route::post('/notes/{note}/remove-encryption', [NoteApiController::class, 'removeEncryption']);
     Route::post('/notes/{note}/toggle-pin', [NoteApiController::class, 'togglePin']);
     Route::post('/notes/{note}/toggle-favorite', [NoteApiController::class, 'toggleFavorite']);
     Route::patch('/notes/{note}/archive', [NoteApiController::class, 'archive']);

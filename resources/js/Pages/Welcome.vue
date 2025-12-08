@@ -334,9 +334,8 @@ const techStack = [
                         <span class="px-3 py-1 rounded-full bg-muted text-sm">shadcn-vue</span>
                         <span class="px-3 py-1 rounded-full bg-muted text-sm">Lucide Icons</span>
                         <span class="px-3 py-1 rounded-full bg-muted text-sm">Axios</span>
-                        <span class="px-3 py-1 rounded-full bg-muted text-sm">TipTap Editor</span>
                         <span class="px-3 py-1 rounded-full bg-muted text-sm">Chart.js</span>
-                        <span class="px-3 py-1 rounded-full bg-muted text-sm">Bcrypt</span>
+                        <span class="px-3 py-1 rounded-full bg-muted text-sm">AES-256 Encryption</span>
                         <span class="px-3 py-1 rounded-full bg-muted text-sm">Laravel Sanctum</span>
                     </div>
                 </div>
