@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 
 class UserApiController extends Controller
 {
@@ -138,5 +139,28 @@ class UserApiController extends Controller
             ],
             'message' => 'Colors updated successfully',
         ]);
+    }
+
+    /**
+     * Clear application cache.
+     */
+    public function clearCache(): JsonResponse
+    {
+        try {
+            Artisan::call('cache:clear');
+            Artisan::call('config:clear');
+            Artisan::call('view:clear');
+            Artisan::call('route:clear');
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Cache cleared successfully',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to clear cache: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 }

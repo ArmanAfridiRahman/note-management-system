@@ -20,6 +20,16 @@ Route::get('/', function () {
     ]);
 });
 
+// Landing page accessible even when logged in
+Route::get('/welcome', function () {
+    return Inertia::render('Welcome', [
+        'canLogin' => Route::has('login'),
+        'canRegister' => Route::has('register'),
+        'laravelVersion' => Application::VERSION,
+        'phpVersion' => PHP_VERSION,
+    ]);
+})->name('welcome');
+
 // Authenticated routes
 Route::middleware(['auth', 'verified'])->group(function () {
     // Dashboard
@@ -30,7 +40,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/notes/favorites', [NoteController::class, 'favorites'])->name('notes.favorites');
     Route::get('/notes/encrypted', [NoteController::class, 'encrypted'])->name('notes.encrypted');
     Route::get('/notes/pinned', [NoteController::class, 'pinned'])->name('notes.pinned');
-    Route::resource('notes', NoteController::class)->except(['create']);
+    Route::resource('notes', NoteController::class)->except(['create', 'show', 'edit']);
     Route::patch('/notes/{note}/archive', [NoteController::class, 'archive'])->name('notes.archive');
     Route::patch('/notes/{note}/pin', [NoteController::class, 'togglePin'])->name('notes.pin');
     Route::patch('/notes/{note}/favorite', [NoteController::class, 'toggleFavorite'])->name('notes.favorite');

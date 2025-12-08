@@ -203,7 +203,25 @@ const groupOptions = computed(() => [
 
 const isEditing = computed(() => currentMode.value === 'edit' || currentMode.value === 'create');
 const isNewNote = computed(() => currentMode.value === 'create' && !currentNoteId.value);
-const canSave = computed(() => contentForm.value.title.trim().length > 0);
+
+// Validation for save button
+const canSave = computed(() => {
+    // Title is required
+    if (contentForm.value.title.trim().length === 0) {
+        return false;
+    }
+
+    // If encryption is enabled and this is a new note or converting to encrypted,
+    // encryption password is required (min 4 characters)
+    const isEnablingEncryption = encryptionForm.value.is_encrypted &&
+        (isNewNote.value || !props.note?.is_encrypted);
+
+    if (isEnablingEncryption && encryptionForm.value.encryption_password.length < 4) {
+        return false;
+    }
+
+    return true;
+});
 
 // Convert hex to RGB for light background
 const hexToRgb = (hex: string) => {
@@ -819,9 +837,12 @@ function handleShare() {
                                             v-model="encryptionForm.encryption_password"
                                             type="password"
                                             placeholder="Enter a secure code (min 4 characters)"
-                                            :error="errors.encryption_password"
+                                            :error="errors.encryption_password || (encryptionForm.encryption_password.length > 0 && encryptionForm.encryption_password.length < 4 ? 'Code must be at least 4 characters' : '')"
                                             required
                                         />
+                                        <p v-if="encryptionForm.encryption_password.length === 0" class="text-xs text-muted-foreground">
+                                            Required to encrypt your note
+                                        </p>
                                     </div>
                                     <div class="space-y-1.5">
                                         <Label class="text-sm text-muted-foreground">Hint (optional)</Label>

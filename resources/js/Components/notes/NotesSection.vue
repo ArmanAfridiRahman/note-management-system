@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
 import axios from 'axios';
 import { Button, Dialog, ComboBox, Input, Label, Textarea, Select, DateTimePicker } from '@/Components/ui';
 import { NoteGrid, NoteModal, QuickNoteInput, GroupModal } from '@/Components/notes';
-import { Users, LayoutGrid, Lock, Loader2, AlertCircle, HelpCircle, ChevronDown, ChevronUp, FolderInput, X, Eye, Pencil, Clock } from 'lucide-vue-next';
+import { Users, LayoutGrid, Lock, Loader2, AlertCircle, HelpCircle, ChevronDown, ChevronUp, FolderInput, X, Eye, Pencil, Clock, Search } from 'lucide-vue-next';
 import { useToast } from '@/Composables/useToast';
 import type { NoteData, TagData, GroupData, UserData, NoteFormData } from '@/types/models';
 
@@ -32,6 +32,7 @@ interface Props {
     groups: GroupData[];
     users?: UserData[];
     showQuickInput?: boolean;
+    showSearch?: boolean;
     defaultNoteValues?: DefaultNoteValues;
     emptyTitle?: string;
     emptyDescription?: string;
@@ -41,12 +42,34 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
     showQuickInput: true,
+    showSearch: true,
     defaultNoteValues: () => ({}),
     emptyTitle: 'No notes found',
     emptyDescription: 'Create your first note by clicking the input above.',
     draggable: true,
     filters: () => ({}),
 });
+
+// Search functionality
+const searchQuery = ref('');
+const searchTimeout = ref<ReturnType<typeof setTimeout> | null>(null);
+
+const combinedFilters = computed(() => {
+    const filters = { ...props.filters };
+    if (searchQuery.value.trim()) {
+        filters.search = searchQuery.value.trim();
+    }
+    return filters;
+});
+
+const handleSearchInput = () => {
+    if (searchTimeout.value) {
+        clearTimeout(searchTimeout.value);
+    }
+    searchTimeout.value = setTimeout(() => {
+        // The filter change will trigger NoteGrid to refetch
+    }, 300);
+};
 
 const noteGridRef = ref<InstanceType<typeof NoteGrid> | null>(null);
 const gridCols = ref<3 | 4 | 5>(4);
@@ -456,6 +479,28 @@ const closeMergeModal = () => {
 
 <template>
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-0">
+        <!-- Search Input -->
+        <div v-if="showSearch" class="mb-4">
+            <div class="relative">
+                <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                    v-model="searchQuery"
+                    type="text"
+                    placeholder="Search notes by title..."
+                    class="w-full h-10 pl-10 pr-10 rounded-lg border border-input bg-background text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                    @input="handleSearchInput"
+                />
+                <button
+                    v-if="searchQuery"
+                    type="button"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    @click="searchQuery = ''"
+                >
+                    <X class="h-4 w-4" />
+                </button>
+            </div>
+        </div>
+
         <!-- Quick Note Input (Google Keep style) -->
         <QuickNoteInput
             v-if="showQuickInput"
@@ -483,8 +528,8 @@ const closeMergeModal = () => {
         <NoteGrid
             ref="noteGridRef"
             :fetch-url="fetchUrl"
-            :filters="filters"
-            :empty-title="emptyTitle"
+            :filters="combinedFilters"
+            :empty-title="searchQuery ? 'No matching notes' : emptyTitle"
             :empty-description="emptyDescription"
             :grid-cols="gridCols"
             :draggable="draggable"

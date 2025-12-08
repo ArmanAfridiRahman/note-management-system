@@ -61,9 +61,14 @@ class NoteApiController extends Controller
                 $query->withTag($request->tag_id);
             }
 
-            // Search
+            // Full search (title + content)
             if ($request->filled('q')) {
                 $query->where('is_encrypted', false)->search($request->q);
+            }
+
+            // Title-only search
+            if ($request->filled('search')) {
+                $query->where('title', 'like', '%' . $request->search . '%');
             }
 
             return $query;

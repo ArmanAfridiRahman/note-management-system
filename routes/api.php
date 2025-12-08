@@ -61,4 +61,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/user/avatar', [UserApiController::class, 'uploadAvatar']);
     Route::delete('/user/avatar', [UserApiController::class, 'deleteAvatar']);
     Route::put('/user/colors', [UserApiController::class, 'updateColors']);
+
+    // System API
+    Route::post('/system/clear-cache', [UserApiController::class, 'clearCache']);
 });

@@ -181,7 +181,7 @@ onMounted(() => {
             </div>
 
             <!-- Tags List -->
-            <div class="max-h-[180px] overflow-y-auto scrollbar-thin">
+            <div class="max-h-[180px] overflow-y-auto tags-scrollbar">
                 <div class="space-y-0.5">
                     <!-- Loading State -->
                     <div v-if="isLoading && tags.length === 0" class="px-3 py-3 text-center">
@@ -241,26 +241,45 @@ onMounted(() => {
     </div>
 </template>
 
-<style scoped>
-.scrollbar-thin {
+<style>
+/* Using unscoped styles for scrollbar to work with dark mode */
+.tags-scrollbar {
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
 }
 
-.scrollbar-thin::-webkit-scrollbar {
-    width: 4px;
+.tags-scrollbar::-webkit-scrollbar {
+    width: 6px;
 }
 
-.scrollbar-thin::-webkit-scrollbar-track {
+.tags-scrollbar::-webkit-scrollbar-track {
     background: transparent;
+    border-radius: 3px;
 }
 
-.scrollbar-thin::-webkit-scrollbar-thumb {
+.tags-scrollbar::-webkit-scrollbar-thumb {
     background-color: hsl(var(--muted-foreground) / 0.3);
-    border-radius: 4px;
+    border-radius: 3px;
 }
 
-.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+.tags-scrollbar::-webkit-scrollbar-thumb:hover {
     background-color: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Dark mode - uses the existing CSS variables which auto-adjust */
+.dark .tags-scrollbar {
+    scrollbar-color: hsl(var(--muted-foreground) / 0.4) hsl(var(--muted) / 0.2);
+}
+
+.dark .tags-scrollbar::-webkit-scrollbar-track {
+    background: hsl(var(--muted) / 0.2);
+}
+
+.dark .tags-scrollbar::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.4);
+}
+
+.dark .tags-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.6);
 }
 </style>
